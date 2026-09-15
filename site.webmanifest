@@ -1,0 +1,14 @@
+{
+  "name": "Global Lawyers Forum",
+  "short_name": "GLF",
+  "description": "Justice Without Borders — a federation of legal professionals across the UK, USA, Pakistan, Saudi Arabia, Canada, Turkey, the EU and the UAE.",
+  "start_url": "/Global-Lawyers-Forum/",
+  "scope": "/Global-Lawyers-Forum/",
+  "display": "standalone",
+  "background_color": "#0A1723",
+  "theme_color": "#0A1723",
+  "icons": [
+    { "src": "logo-badge-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "logo-badge-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
