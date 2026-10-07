@@ -1,0 +1,49 @@
+﻿name: Deploy static site
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      SSH_PRIVATE_KEY: |
+        -----BEGIN OPENSSH PRIVATE KEY-----
+        b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
+        QyNTUxOQAAACBVjv1g+Zl6PQfyd4cKUewlZQPleig/5dVhejKiKaCE0AAAAKiw/6BysP+g
+        cgAAAAtzc2gtZWQyNTUxOQAAACBVjv1g+Zl6PQfyd4cKUewlZQPleig/5dVhejKiKaCE0A
+        AAAED51sGGQXw9dumqi648IITSoO4Bl5xW9j3AoaUi05VWK1WO/WD5mXo9B/J3hwpR7CVl
+        A+V6KD/l1WF6MqIpoITQAAAAH211aGFtbWFkLmFzYWRAc2VwdGVtc3lzdGVtcy5jb20BAg
+        MEBQY=
+        -----END OPENSSH PRIVATE KEY-----
+
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure SSH
+        shell: bash
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H 187.124.137.131 >> ~/.ssh/known_hosts
+
+      - name: Deploy files
+        shell: bash
+        run: |
+          rsync -az --delete \
+            --exclude '.git/' \
+            --exclude '.github/' \
+            --exclude 'node_modules/' \
+            --exclude 'package-lock.json' \
+            --exclude 'package.json' \
+            --exclude 'GLA_Antigravity_Master_Prompt.md' \
+            --exclude 'README.md' \
+            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
+            ./ globallawyersforum@187.124.137.131:/home/globallawyersforum/htdocs/globallawyersforum.org/

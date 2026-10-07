@@ -33,7 +33,7 @@ Do **not** clone any existing legal-association website. Reproduce the identity 
 - **Tailwind CSS** for styling, driven by CSS variables/design tokens (below). No component-library chrome — bespoke components only.
 - **next/font** for self-hosted Google Fonts (Fraunces + Archivo) — no render-blocking external font requests.
 - **next/image** for every raster image (AVIF/WebP, lazy, sized, `priority` only on the hero).
-- Deploy target: static-friendly / edge (Vercel-style). Prefer **Server Components**; mark only interactive/animated pieces `"use client"`.
+- Deploy target: static-friendly hosting.
 - No jQuery, no heavy UI kits, no unused deps. Keep the JS bundle lean.
 
 ---
