@@ -76,7 +76,12 @@ function dash_(value) {
 
 function getOrCreateFolder_(name, parent) {
   if (DRIVE_FOLDER_ID && !parent) {
-    return DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    try {
+      return DriveApp.getFolderById(DRIVE_FOLDER_ID);
+    } catch (e) {
+      // If this deployment account cannot access the configured folder ID,
+      // fall back to a folder owned by the account running the Apps Script.
+    }
   }
   var scope = parent || DriveApp;
   var folders = scope.getFoldersByName(name);

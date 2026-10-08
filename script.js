@@ -303,8 +303,9 @@
         preview.classList.remove('show');
         dropzone.querySelector('.utext').textContent = 'Click to upload, or drag a photo here';
         form.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      }).catch(function () {
-        showMsg('err', 'Something went wrong sending your application. Please try again, or email globallawyersforum@gmail.com directly.');
+      }).catch(function (err) {
+        var detail = err && err.message ? ' (' + err.message + ')' : '';
+        showMsg('err', 'Something went wrong sending your application' + detail + '. Please try again, or email globallawyersforum@gmail.com directly.');
       }).then(function () {
         submitBtn.classList.remove('loading');
         submitBtn.removeAttribute('disabled');
