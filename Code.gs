@@ -7,6 +7,7 @@
  */
 
 var SHEET_NAME = 'Applications';
+var SPREADSHEET_ID = '19n4aVEd_zYQCrC6GVR8oYeJNaQPxVXpNG3oCg2W0rJM';
 var DRIVE_FOLDER_NAME = 'GLF Membership Photos';
 var REGISTRAR_EMAIL = 'globallawyersforum@gmail.com';
 var ORG_NAME = 'Global Lawyers Forum';
@@ -30,9 +31,9 @@ function doPost(e) {
       picture = savePicture(data, ref);
     }
 
-    logSubmission(data, picture, ref);
+    var entry = logSubmission(data, picture, ref);
     emailApplicant(data, ref);
-    emailRegistrar(data, picture, ref);
+    emailRegistrar(data, picture, ref, entry);
   } catch (err) {
     result = { ok: false, error: String(err) };
   }
@@ -88,9 +89,8 @@ function savePicture(data, ref) {
   var fileName = ref + ' - ' + label + ' - ' + stamp + ext;
 
   var rootFolder = getOrCreateFolder_(DRIVE_FOLDER_NAME);
-  var applicantFolder = getOrCreateFolder_(label, rootFolder);
   var blob = Utilities.newBlob(bytes, data.pictureType || 'image/jpeg', fileName);
-  var file = applicantFolder.createFile(blob);
+  var file = rootFolder.createFile(blob);
 
   try {
     file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
@@ -102,12 +102,17 @@ function savePicture(data, ref) {
     url: file.getUrl(),
     name: file.getName(),
     id: file.getId(),
-    folderUrl: applicantFolder.getUrl()
+    folderUrl: rootFolder.getUrl()
   };
 }
 
 function logSubmission(data, picture, ref) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = SPREADSHEET_ID
+    ? SpreadsheetApp.openById(SPREADSHEET_ID)
+    : SpreadsheetApp.getActiveSpreadsheet();
+  if (!ss) {
+    throw new Error('No spreadsheet is attached. Set SPREADSHEET_ID to your GLF Membership Applications spreadsheet ID.');
+  }
   var sheet = ss.getSheetByName(SHEET_NAME);
   if (!sheet) {
     sheet = ss.insertSheet(SHEET_NAME);
@@ -115,7 +120,7 @@ function logSubmission(data, picture, ref) {
       'Timestamp', 'Reference', 'Enquiry Type', 'Name', 'Address', 'Cell No.', 'Email',
       'CNIC / Identity', 'Passport No.', 'License of the Bar',
       'Parent Bar Membership', 'Message', 'Picture File Name', 'Picture File ID',
-      'Picture URL', 'Applicant Folder', 'Submitted From'
+      'Picture URL', 'Image Folder', 'Submitted From'
     ]);
     sheet.setFrozenRows(1);
   }
@@ -126,6 +131,12 @@ function logSubmission(data, picture, ref) {
     data.message || '', picture.name || '', picture.id || '', picture.url || '',
     picture.folderUrl || '', data.pageUrl || ''
   ]);
+
+  var row = sheet.getLastRow();
+  return {
+    row: row,
+    url: ss.getUrl() + '#gid=' + sheet.getSheetId() + '&range=A' + row + ':Q' + row
+  };
 }
 
 function detailsTable_(data, picture, ref) {
@@ -156,10 +167,18 @@ function detailsTable_(data, picture, ref) {
   }).join('');
 }
 
-function emailShell_(title, intro, tableHtml, ctaUrl, ctaText) {
-  var cta = ctaUrl
-    ? '<p style="margin:24px 0 0;"><a href="' + esc_(ctaUrl) + '" style="display:inline-block;background:#c6a15b;color:#091723;text-decoration:none;padding:12px 18px;border-radius:4px;font-weight:700;">' + esc_(ctaText || 'Open') + '</a></p>'
-    : '';
+function emailShell_(title, intro, tableHtml, actions, ctaText) {
+  if (actions && !Array.isArray(actions)) {
+    actions = [{ url: actions, text: ctaText || 'Open' }];
+  }
+  var cta = '';
+  if (actions && actions.length) {
+    cta = '<p style="margin:24px 0 0;">' + actions.filter(function (action) {
+      return action && action.url;
+    }).map(function (action) {
+      return '<a href="' + esc_(action.url) + '" style="display:inline-block;background:#c6a15b;color:#091723;text-decoration:none;padding:12px 18px;border-radius:4px;font-weight:700;margin:0 8px 8px 0;">' + esc_(action.text || 'Open') + '</a>';
+    }).join('') + '</p>';
+  }
 
   return '<div style="margin:0;padding:0;background:#f4f0e8;font-family:Arial,Helvetica,sans-serif;">' +
     '<div style="max-width:680px;margin:0 auto;padding:28px 14px;">' +
@@ -210,7 +229,7 @@ function emailApplicant(data, ref) {
   });
 }
 
-function emailRegistrar(data, picture, ref) {
+function emailRegistrar(data, picture, ref, entry) {
   var subject = 'New ' + (data.intent === 'registrar' ? 'registrar enquiry' : 'membership application') + ' - ' + data.name + ' - ' + ref;
   var body =
     'A new submission was received on the website.\n\n' +
@@ -227,6 +246,7 @@ function emailRegistrar(data, picture, ref) {
     'Picture file: ' + dash_(picture.name) + '\n' +
     'Picture file ID: ' + dash_(picture.id) + '\n' +
     'Picture: ' + dash_(picture.url) + '\n' +
+    'Sheet entry: ' + dash_(entry && entry.url) + '\n' +
     'Submitted from: ' + dash_(data.pageUrl) + '\n';
 
   var intro = 'A new website submission has been received. The applicant photo has been saved to Google Drive and the full record has been added to the Applications sheet.';
@@ -235,6 +255,10 @@ function emailRegistrar(data, picture, ref) {
     to: REGISTRAR_EMAIL,
     subject: subject,
     body: body,
-    htmlBody: emailShell_('New website submission', intro, detailsTable_(data, picture, ref), picture.url, 'Open applicant photo')
+    htmlBody: emailShell_('New website submission', intro, detailsTable_(data, picture, ref), [
+      { url: picture.url, text: 'View applicant photo' },
+      { url: picture.folderUrl, text: 'View image in Drive' },
+      { url: entry && entry.url, text: 'View applicant entry' }
+    ])
   });
 }
