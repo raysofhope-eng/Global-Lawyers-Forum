@@ -12,4 +12,4 @@
    step-by-step deployment guide.
    ================================================================ */
 
-window.GLF_FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbyzSzYu5OzWZnml4LoCpFuBJYUTSEqN293Y-YGLjlKEOs3VOCsLobDFi2u0pgQVzg/exec";
+window.GLF_FORM_ENDPOINT = "https://script.google.com/macros/s/AKfycbxpdihjmV0i7t6rRDW0numfLf5kmADKIseisTXPqeGFla_6G-qh1e3VJRsZP5rHe0ED/exec";
