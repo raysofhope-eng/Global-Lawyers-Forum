@@ -9,6 +9,7 @@
 var SHEET_NAME = 'Applications';
 var SPREADSHEET_ID = '19n4aVEd_zYQCrC6GVR8oYeJNaQPxVXpNG3oCg2W0rJM';
 var DRIVE_FOLDER_NAME = 'GLF Membership Photos';
+var DRIVE_FOLDER_ID = '1PZanzr0Vyq39ssMEcBERUqlUFulTGeSu';
 var REGISTRAR_EMAIL = 'globallawyersforum@gmail.com';
 var ORG_NAME = 'Global Lawyers Forum';
 var TAGLINE = 'Justice Without Borders';
@@ -74,6 +75,9 @@ function dash_(value) {
 }
 
 function getOrCreateFolder_(name, parent) {
+  if (DRIVE_FOLDER_ID && !parent) {
+    return DriveApp.getFolderById(DRIVE_FOLDER_ID);
+  }
   var scope = parent || DriveApp;
   var folders = scope.getFoldersByName(name);
   if (folders.hasNext()) return folders.next();
@@ -139,7 +143,7 @@ function logSubmission(data, picture, ref) {
   };
 }
 
-function detailsTable_(data, picture, ref) {
+function detailsTable_(data, picture, ref, entry) {
   var rows = [
     ['Reference', ref],
     ['Name', data.name],
@@ -156,6 +160,11 @@ function detailsTable_(data, picture, ref) {
   if (picture && picture.url) {
     rows.push(['Photo File', picture.name]);
     rows.push(['Photo Link', '<a href="' + esc_(picture.url) + '">Open in Google Drive</a>']);
+    rows.push(['Image Folder', '<a href="' + esc_(picture.folderUrl) + '">Open Drive folder</a>']);
+  }
+
+  if (entry && entry.url) {
+    rows.push(['Sheet Entry', '<a href="' + esc_(entry.url) + '">Open applicant row</a>']);
   }
 
   return rows.map(function (row) {
@@ -225,7 +234,7 @@ function emailApplicant(data, ref) {
     to: data.email,
     subject: subject,
     body: body,
-    htmlBody: emailShell_(isRegistrar ? 'Registrar enquiry received' : 'Membership application received', intro, detailsTable_(data, null, ref))
+    htmlBody: emailShell_(isRegistrar ? 'Registrar enquiry received' : 'Membership application received', intro, detailsTable_(data, null, ref, null))
   });
 }
 
@@ -255,7 +264,7 @@ function emailRegistrar(data, picture, ref, entry) {
     to: REGISTRAR_EMAIL,
     subject: subject,
     body: body,
-    htmlBody: emailShell_('New website submission', intro, detailsTable_(data, picture, ref), [
+    htmlBody: emailShell_('New website submission', intro, detailsTable_(data, picture, ref, entry), [
       { url: picture.url, text: 'View applicant photo' },
       { url: picture.folderUrl, text: 'View image in Drive' },
       { url: entry && entry.url, text: 'View applicant entry' }
