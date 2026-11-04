@@ -1,0 +1,50 @@
+[
+  {
+    "code": "UK",
+    "name": "United Kingdom",
+    "description": "The seat of the Forum and its founding bench, home to the common-law tradition.",
+    "city": "London"
+  },
+  {
+    "code": "USA",
+    "name": "United States",
+    "description": "Federal and state practice, corporate and constitutional advocacy across the Union.",
+    "city": "New York"
+  },
+  {
+    "code": "PAK",
+    "name": "Pakistan",
+    "description": "A vast and vigorous bar, uniting High Court and Supreme Court advocates nationwide.",
+    "city": "Islamabad"
+  },
+  {
+    "code": "KSA",
+    "name": "Saudi Arabia",
+    "description": "Commercial and Shariah practice at the centre of the Gulf's fastest-growing legal market.",
+    "city": "Riyadh"
+  },
+  {
+    "code": "CAN",
+    "name": "Canada",
+    "description": "Common-law and civil-law traditions side by side, from Toronto across the Commonwealth.",
+    "city": "Toronto"
+  },
+  {
+    "code": "TUR",
+    "name": "Turkey",
+    "description": "A bridge between European and regional law, anchored in Istanbul's commercial bar.",
+    "city": "Istanbul"
+  },
+  {
+    "code": "EU",
+    "name": "European Union",
+    "description": "Civil-law practice and Union-wide regulation, convened from the heart of Europe.",
+    "city": "Brussels"
+  },
+  {
+    "code": "UAE",
+    "name": "United Arab Emirates",
+    "description": "The commercial crossroads of the Gulf, where arbitration, trade and cross-border counsel meet.",
+    "city": "Dubai"
+  }
+]

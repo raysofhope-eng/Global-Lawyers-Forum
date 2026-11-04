@@ -1,4 +1,0 @@
-User-agent: *
-Allow: /
-
-Sitemap: https://raysofhope-eng.github.io/Global-Lawyers-Forum/sitemap.xml

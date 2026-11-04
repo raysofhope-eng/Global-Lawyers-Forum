@@ -1,0 +1,37 @@
+{
+  "home": {
+    "title": "Global Lawyers Forum | Justice Without Borders",
+    "description": "Global Lawyers Forum (GLF) is a federation of legal professionals across the UK, USA, Pakistan, Saudi Arabia, Canada, Turkey, the EU and the UAE, united to advance the rule of law and carry justice without borders.",
+    "path": "/"
+  },
+  "mission": {
+    "title": "Our Charter | Global Lawyers Forum",
+    "description": "The charter behind Global Lawyers Forum: uphold the rule of law, enable cross-border practice, champion human rights, and advance professional excellence.",
+    "path": "/mission"
+  },
+  "founder": {
+    "title": "Founding President | Global Lawyers Forum",
+    "description": "A message from Barrister Muhammad Sohail Anjum, Founder and First President of the Global Lawyers Forum.",
+    "path": "/founder"
+  },
+  "chapters": {
+    "title": "Chapters | Global Lawyers Forum",
+    "description": "The eight founding chapters of Global Lawyers Forum: United Kingdom, United States, Pakistan, Saudi Arabia, Canada, Turkey, the European Union and the UAE.",
+    "path": "/chapters"
+  },
+  "leadership": {
+    "title": "Leadership &amp; Governance | Global Lawyers Forum",
+    "description": "How Global Lawyers Forum is governed: the Presidency, the Bench of chapter presidents, and the Council of Benchers.",
+    "path": "/leadership"
+  },
+  "events": {
+    "title": "Events &amp; Summits | Global Lawyers Forum",
+    "description": "Upcoming Global Lawyers Forum convenings, including the Global Legal Summit and regional roundtables.",
+    "path": "/events"
+  },
+  "membership": {
+    "title": "Membership | Global Lawyers Forum",
+    "description": "Apply for membership with Global Lawyers Forum, or contact the Office of the Registrar. Associate, Fellow and Institutional tiers available.",
+    "path": "/membership"
+  }
+}
