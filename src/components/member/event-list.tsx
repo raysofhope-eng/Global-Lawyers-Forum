@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -49,10 +49,13 @@ export function MemberEventList() {
         : false,
   });
 
+  const autoOpenedRef = useRef(false);
+
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && !autoOpenedRef.current) {
       const params = new URLSearchParams(window.location.search);
       if (params.get("event") === "complete" && bookings.data?.length) {
+        autoOpenedRef.current = true;
         const sessionId = params.get("session_id");
         const found =
           (sessionId &&
@@ -60,12 +63,17 @@ export function MemberEventList() {
               (b) => b.stripeCheckoutSessionId === sessionId,
             )) ||
           bookings.data.find((b) => b.status === "paid");
-        if (found && !preview) {
+        if (found) {
           setPreview(found);
         }
+        window.history.replaceState(
+          {},
+          "",
+          window.location.pathname + "?tab=events",
+        );
       }
     }
-  }, [bookings.data, preview]);
+  }, [bookings.data]);
 
   const checkout = useMutation({
     mutationFn: (id: string) =>
