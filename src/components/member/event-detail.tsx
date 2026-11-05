@@ -70,8 +70,8 @@ export function MemberEventDetail({ slug }: { slug: string }) {
         <p role="alert" className="field-error">
           {query.error.message}
         </p>
-        <Link className="btn btn-ghost" href="/member">
-          Return to portal
+        <Link className="btn btn-ghost" href="/member?tab=events">
+          Return to events
         </Link>
       </div>
     );
@@ -81,15 +81,15 @@ export function MemberEventDetail({ slug }: { slug: string }) {
       <div className="empty-state">
         <h1>Event unavailable</h1>
         <p>This event may have been removed or unpublished.</p>
-        <Link className="btn btn-ghost" href="/member">
-          Return to portal
+        <Link className="btn btn-ghost" href="/member?tab=events">
+          Return to events
         </Link>
       </div>
     );
   return (
     <>
       <div className="event-detail-nav">
-        <Link className="portal-back" href="/member">
+        <Link className="portal-back" href="/member?tab=events">
           ← Member events
         </Link>
         <span>

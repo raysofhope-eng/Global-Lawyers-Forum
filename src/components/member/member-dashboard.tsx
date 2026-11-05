@@ -16,7 +16,7 @@ import { IssuedDocuments } from '@/components/documents/certificate-panel';
 import { Dialog } from '@/components/ui/dialog';
 import { MemberEventList } from './event-list';
 export function MemberDashboard(){
- const session=useSession();const signOut=useSignOut();const [tab,setTab]=useState(()=>typeof window!=='undefined'&&new URLSearchParams(window.location.search).has('event')?'events':'profile');const [password,setPassword]=useState(false);
+ const session=useSession();const signOut=useSignOut();const [tab,setTab]=useState(()=>{if(typeof window!=='undefined'){const params=new URLSearchParams(window.location.search);if(params.has('event')||params.get('tab')==='events'||window.location.hash==='#events')return 'events';}return 'profile';});const [password,setPassword]=useState(false);
  const profile=useQuery({queryKey:['member','profile'],queryFn:()=>api<ApplicationDetail>('/member/profile'),enabled:session.data?.role==='member',gcTime:0});
  const documents=useQuery({queryKey:['member','certificates'],queryFn:()=>api<CertificateSummary[]>('/member/certificates'),enabled:session.data?.role==='member',gcTime:0});
  if(session.isPending)return <p role="status">Checking your session…</p>;

@@ -94,16 +94,22 @@ jobs:
           rm -f "$archive"
           ln -sfn "$release" "$APP_ROOT/current.next"
           mv -Tf "$APP_ROOT/current.next" "$APP_ROOT/current"
-          pm2 startOrReload "$APP_ROOT/current/ecosystem.config.cjs" --update-env
-          sleep 3
-          if ! curl --fail --silent --show-error --retry 10 --retry-delay 2 --retry-connrefused \
+          if pm2 describe globallawyersforum >/dev/null 2>&1; then
+            pm2 delete globallawyersforum
+          fi
+          pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --update-env
+          sleep 4
+          if ! curl --fail --silent --show-error --retry 15 --retry-delay 2 --retry-connrefused \
                http://127.0.0.1:3005/ >/dev/null; then
             echo "Health check failed! Displaying PM2 logs:"
             pm2 logs globallawyersforum --lines 50 --nostream || true
             if [ -n "$previous" ] && [ -d "$previous" ]; then
               ln -sfn "$previous" "$APP_ROOT/current.next"
               mv -Tf "$APP_ROOT/current.next" "$APP_ROOT/current"
-              pm2 startOrReload "$APP_ROOT/current/ecosystem.config.cjs" --update-env
+              if pm2 describe globallawyersforum >/dev/null 2>&1; then
+                pm2 delete globallawyersforum
+              fi
+              pm2 start "$APP_ROOT/current/ecosystem.config.cjs" --update-env
             fi
             exit 1
           fi
