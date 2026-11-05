@@ -40,7 +40,7 @@ export function MemberEventList() {
     queryKey: ["member", "event-bookings"],
     queryFn: () => api<EventBooking[]>("/member/event-bookings"),
     refetchInterval: (query) =>
-      query.state.data?.some((item) => item.status === "pending")
+      clientSecret && query.state.data?.some((item) => item.status === "pending")
         ? 3000
         : false,
   });
@@ -100,7 +100,10 @@ export function MemberEventList() {
       {clientSecret && stripePromise && (
         <Dialog
           title="Secure event payment"
-          onClose={() => setClientSecret("")}
+          onClose={() => {
+            setClientSecret("");
+            void bookings.refetch();
+          }}
           wide
         >
           <div className="dialog-body stripe-checkout">

@@ -1,49 +1,110 @@
-﻿name: Deploy static site
+name: Build and deploy frontend
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-production
+  cancel-in-progress: false
+
+env:
+  NODE_VERSION: "22"
+  DEPLOY_HOST: 187.124.137.131
+  DEPLOY_USER: globallawyersforum
+  APP_ROOT: /home/globallawyersforum/htdocs/globallawyersforum.org
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
-    env:
-      SSH_PRIVATE_KEY: |
-        -----BEGIN OPENSSH PRIVATE KEY-----
-        b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAAAMwAAAAtzc2gtZW
-        QyNTUxOQAAACBVjv1g+Zl6PQfyd4cKUewlZQPleig/5dVhejKiKaCE0AAAAKiw/6BysP+g
-        cgAAAAtzc2gtZWQyNTUxOQAAACBVjv1g+Zl6PQfyd4cKUewlZQPleig/5dVhejKiKaCE0A
-        AAAED51sGGQXw9dumqi648IITSoO4Bl5xW9j3AoaUi05VWK1WO/WD5mXo9B/J3hwpR7CVl
-        A+V6KD/l1WF6MqIpoITQAAAAH211aGFtbWFkLmFzYWRAc2VwdGVtc3lzdGVtcy5jb20BAg
-        MEBQY=
-        -----END OPENSSH PRIVATE KEY-----
-
-
+    environment: production
+    timeout-minutes: 20
     steps:
-      - name: Checkout
+      - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+
+      - name: Create production environment
+        shell: bash
+        env:
+          PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
+        run: |
+          test -n "$PRODUCTION_ENV"
+          printf '%s\n' "$PRODUCTION_ENV" > .env.production
+          chmod 600 .env.production
+
+      - name: Install, validate, and build
+        run: |
+          npm ci
+          npm run typecheck
+          npm run build
+
+      - name: Package standalone application
+        shell: bash
+        run: |
+          cp -R public .next/standalone/public
+          mkdir -p .next/standalone/.next
+          cp -R .next/static .next/standalone/.next/static
+          cp ecosystem.config.cjs .next/standalone/ecosystem.config.cjs
+          cp .env.production .next/standalone/.env.production
+          tar -C .next/standalone -czf frontend-release.tgz .
 
       - name: Configure SSH
         shell: bash
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SSH_KNOWN_HOSTS: ${{ secrets.SSH_KNOWN_HOSTS }}
         run: |
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
+          test -n "$SSH_PRIVATE_KEY"
+          test -n "$SSH_KNOWN_HOSTS"
+          install -m 700 -d ~/.ssh
           printf '%s\n' "$SSH_PRIVATE_KEY" > ~/.ssh/deploy_key
           chmod 600 ~/.ssh/deploy_key
-          ssh-keyscan -H 187.124.137.131 >> ~/.ssh/known_hosts
+          printf '%s\n' "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/known_hosts
 
-      - name: Deploy files
+      - name: Upload release
         shell: bash
         run: |
-          rsync -az --delete \
-            --exclude '.git/' \
-            --exclude '.github/' \
-            --exclude 'node_modules/' \
-            --exclude 'package-lock.json' \
-            --exclude 'package.json' \
-            --exclude 'GLA_Antigravity_Master_Prompt.md' \
-            --exclude 'README.md' \
-            -e "ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes" \
-            ./ globallawyersforum@187.124.137.131:/home/globallawyersforum/htdocs/globallawyersforum.org/
+          scp -i ~/.ssh/deploy_key -o IdentitiesOnly=yes frontend-release.tgz \
+            "$DEPLOY_USER@$DEPLOY_HOST:/tmp/glf-frontend-${GITHUB_SHA}.tgz"
+
+      - name: Activate and verify release
+        shell: bash
+        run: |
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes "$DEPLOY_USER@$DEPLOY_HOST" \
+            "APP_ROOT='$APP_ROOT' RELEASE_SHA='$GITHUB_SHA' bash -s" <<'REMOTE'
+          set -Eeuo pipefail
+          command -v node >/dev/null
+          command -v pm2 >/dev/null
+          release="$APP_ROOT/releases/$RELEASE_SHA"
+          archive="/tmp/glf-frontend-$RELEASE_SHA.tgz"
+          previous="$(readlink -f "$APP_ROOT/current" 2>/dev/null || true)"
+          mkdir -p "$release"
+          tar -xzf "$archive" -C "$release"
+          rm -f "$archive"
+          ln -sfn "$release" "$APP_ROOT/current.next"
+          mv -Tf "$APP_ROOT/current.next" "$APP_ROOT/current"
+          if ! pm2 startOrReload "$APP_ROOT/current/ecosystem.config.cjs" --update-env || \
+             ! curl --fail --silent --show-error --retry 10 --retry-delay 2 \
+               http://127.0.0.1:3005/ >/dev/null; then
+            if [ -n "$previous" ] && [ -d "$previous" ]; then
+              ln -sfn "$previous" "$APP_ROOT/current.next"
+              mv -Tf "$APP_ROOT/current.next" "$APP_ROOT/current"
+              pm2 startOrReload "$APP_ROOT/current/ecosystem.config.cjs" --update-env
+            fi
+            exit 1
+          fi
+          pm2 save
+          find "$APP_ROOT/releases" -mindepth 1 -maxdepth 1 -type d -mtime +14 \
+            ! -samefile "$APP_ROOT/current" -exec rm -rf -- {} +
+          REMOTE
