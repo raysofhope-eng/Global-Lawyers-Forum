@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -48,16 +48,48 @@ export function MemberEventList() {
         ? 3000
         : false,
   });
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("event") === "complete" && bookings.data?.length) {
+        const sessionId = params.get("session_id");
+        const found =
+          (sessionId &&
+            bookings.data.find(
+              (b) => b.stripeCheckoutSessionId === sessionId,
+            )) ||
+          bookings.data.find((b) => b.status === "paid");
+        if (found && !preview) {
+          setPreview(found);
+        }
+      }
+    }
+  }, [bookings.data, preview]);
+
   const checkout = useMutation({
     mutationFn: (id: string) =>
-      api<{ clientSecret?: string; free?: boolean }>(
-        `/member/events/${id}/checkout`,
-        { method: "POST" },
-      ),
-    onSuccess: (result) =>
-      result.clientSecret
-        ? setClientSecret(result.clientSecret)
-        : void bookings.refetch(),
+      api<{
+        clientSecret?: string;
+        free?: boolean;
+        paid?: boolean;
+        booking?: EventBooking;
+      }>(`/member/events/${id}/checkout`, { method: "POST" }),
+    onSuccess: async (result) => {
+      if (result.clientSecret) {
+        setClientSecret(result.clientSecret);
+      } else {
+        const updated = await bookings.refetch();
+        if (result.booking) {
+          const matched = updated.data?.find(
+            (b) => b.id === result.booking?.id,
+          );
+          if (matched) {
+            setPreview(matched);
+          }
+        }
+      }
+    },
   });
   const countries = useMemo(
     () =>
@@ -145,6 +177,33 @@ export function MemberEventList() {
           </div>
         </Dialog>
       )}
+      {typeof window !== "undefined" &&
+        new URLSearchParams(window.location.search).get("event") === "complete" && (
+          <div
+            className="status-banner"
+            style={{
+              background: "rgba(197, 160, 89, 0.12)",
+              border: "1px solid rgba(197, 160, 89, 0.35)",
+              padding: "16px 20px",
+              borderRadius: "8px",
+              marginBottom: "24px",
+            }}
+          >
+            <strong
+              style={{
+                display: "block",
+                color: "var(--accent-gold, #c5a059)",
+                marginBottom: "4px",
+                fontSize: "1rem",
+              }}
+            >
+              Payment Confirmed
+            </strong>
+            <p style={{ margin: 0, fontSize: "0.9rem", opacity: 0.9 }}>
+              Your seat reservation is confirmed. Your official invitation document is ready below.
+            </p>
+          </div>
+        )}
       {!!paid.length && (
         <section>
           <div className="list-heading">

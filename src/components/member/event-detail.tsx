@@ -1,6 +1,6 @@
 "use client";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { loadStripe } from "@stripe/stripe-js";
 import {
@@ -47,16 +47,43 @@ export function MemberEventDetail({ slug }: { slug: string }) {
         : false,
   });
 
+  const event = query.data?.find((item) => item.slug === slug);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("event") === "complete" && bookings.data?.length && event) {
+        const found = bookings.data.find(
+          (b) => b.eventId === event.id && b.status === "paid",
+        );
+        if (found && !preview) {
+          setPreview(found);
+        }
+      }
+    }
+  }, [bookings.data, event, preview]);
+
   const checkout = useMutation({
     mutationFn: (id: string) =>
-      api<{ clientSecret?: string; free?: boolean }>(
-        `/member/events/${id}/checkout`,
-        { method: "POST" },
-      ),
-    onSuccess: (result) =>
-      result.clientSecret
-        ? setClientSecret(result.clientSecret)
-        : void bookings.refetch(),
+      api<{
+        clientSecret?: string;
+        free?: boolean;
+        paid?: boolean;
+        booking?: EventBooking;
+      }>(`/member/events/${id}/checkout`, { method: "POST" }),
+    onSuccess: async (result) => {
+      if (result.clientSecret) {
+        setClientSecret(result.clientSecret);
+      } else {
+        const updated = await bookings.refetch();
+        if (result.booking) {
+          const matched =
+            updated.data?.find((b) => b.id === result.booking?.id) ||
+            result.booking;
+          setPreview(matched);
+        }
+      }
+    },
   });
   if (query.isPending)
     return (
@@ -75,7 +102,6 @@ export function MemberEventDetail({ slug }: { slug: string }) {
         </Link>
       </div>
     );
-  const event = query.data.find((item) => item.slug === slug);
   if (!event)
     return (
       <div className="empty-state">
