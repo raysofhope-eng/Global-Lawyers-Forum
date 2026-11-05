@@ -13,9 +13,13 @@ import { Dialog } from "@/components/ui/dialog";
 
 const pageSize = 6;
 const publishableKey =
-  process.env.NODE_ENV === "production"
-    ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE
-    : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST;
+  (process.env.NEXT_PUBLIC_STRIPE_MODE === "test"
+    ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
+    : (process.env.NODE_ENV === "production"
+        ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE
+        : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST)) ||
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST ||
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE;
 const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 const price = (event: MemberEvent) =>
   event.feeCents
