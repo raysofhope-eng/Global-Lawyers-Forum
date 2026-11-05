@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  NODE_VERSION: "22"
+  NODE_VERSION: "24"
   DEPLOY_HOST: 187.124.137.131
   DEPLOY_USER: globallawyersforum
   APP_ROOT: /home/globallawyersforum/htdocs/globallawyersforum.org
