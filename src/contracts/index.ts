@@ -215,5 +215,6 @@ export interface EventBooking {
   feeCents: number;
   currency: string;
   invitationCode: string | null;
+  stripeCheckoutSessionId?: string | null;
   event: MemberEvent;
 }
