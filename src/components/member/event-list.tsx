@@ -126,7 +126,9 @@ export function MemberEventList() {
     paid =
       bookings.data?.filter((item) =>
         ["paid", "refunded"].includes(item.status),
-      ) || [];
+      ) || [],
+    cancelled =
+      bookings.data?.filter((item) => item.status === "cancelled") || [];
   const changeFilter = (apply: () => void) => {
     apply();
     setPage(1);
@@ -213,9 +215,9 @@ export function MemberEventList() {
           </div>
         )}
       {!!paid.length && (
-        <section>
+        <section style={{ marginBottom: "32px" }}>
           <div className="list-heading">
-            <h2>My invitations</h2>
+            <h2>My confirmed tickets & invitations</h2>
           </div>
           <div className="issued-list">
             {paid.map((item) => (
@@ -228,9 +230,18 @@ export function MemberEventList() {
                       ? "Online"
                       : item.event.country}
                   </p>
-                  <span className={`status-badge ${item.status === "paid" ? "approved" : "reviewing"}`}>
-                    {item.status === "paid" ? "Confirmed" : "Refunded · invitation retained"}
-                  </span>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
+                    <span className="status-badge approved">
+                      {item.status === "paid" ? "Confirmed" : "Refunded · Place retained"}
+                    </span>
+                    {item.status === "refunded" && (
+                      <span style={{ fontSize: "0.85rem", color: "var(--accent-gold, #c5a059)" }}>
+                        {item.refundedAt
+                          ? `Payment refunded on ${new Date(item.refundedAt).toLocaleDateString()}`
+                          : "Payment refunded"} (Official invitation remains valid)
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="row-actions">
                   <button
@@ -245,6 +256,47 @@ export function MemberEventList() {
                   >
                     Download PDF
                   </a>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      )}
+
+      {!!cancelled.length && (
+        <section style={{ marginBottom: "32px" }}>
+          <div className="list-heading">
+            <h2>Cancelled bookings & refunds</h2>
+          </div>
+          <div className="issued-list">
+            {cancelled.map((item) => (
+              <article className="issued-row" key={item.id} style={{ opacity: 0.9, borderLeft: "3px solid #dc2626" }}>
+                <div>
+                  <strong>{item.event.name}</strong>
+                  <p>
+                    {new Date(item.event.startsAt).toLocaleString()} ·{" "}
+                    {item.event.format === "online"
+                      ? "Online"
+                      : item.event.country}
+                  </p>
+                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
+                    <span className="status-badge rejected">
+                      {item.refundedAt ? "Refunded & Cancelled" : "Cancelled"}
+                    </span>
+                    <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+                      {item.refundedAt
+                        ? `Refund of ${price(item.event)} processed on ${new Date(item.refundedAt).toLocaleDateString()}`
+                        : "Ticket reservation cancelled"}
+                    </span>
+                  </div>
+                </div>
+                <div className="row-actions">
+                  <Link
+                    className="btn btn-ghost"
+                    href={`/member/events/${item.eventId}`}
+                  >
+                    View event details
+                  </Link>
                 </div>
               </article>
             ))}
@@ -379,16 +431,34 @@ export function MemberEventList() {
                             }
                             onClick={() => checkout.mutate(event.id)}
                           >
-                            {own?.status === "pending" ? "Continue" : "Book"}
+                            {own?.status === "pending"
+                              ? "Continue"
+                              : own?.status === "cancelled"
+                                ? "Re-book"
+                                : "Book"}
                           </button>
                         )}
                       </div>
                     </div>
                     {own && (
                       <span
-                        className={`status-badge ${own.status === "paid" ? "approved" : "reviewing"}`}
+                        className={`status-badge ${
+                          own.status === "paid"
+                            ? "approved"
+                            : own.status === "refunded"
+                              ? "approved"
+                              : own.status === "cancelled"
+                                ? "rejected"
+                                : "reviewing"
+                        }`}
                       >
-                        {own.status}
+                        {own.status === "paid"
+                          ? "Confirmed"
+                          : own.status === "refunded"
+                            ? "Refunded (Seat retained)"
+                            : own.status === "cancelled"
+                              ? "Ticket cancelled"
+                              : "Payment pending"}
                       </span>
                     )}
                   </div>

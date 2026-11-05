@@ -216,5 +216,10 @@ export interface EventBooking {
   currency: string;
   invitationCode: string | null;
   stripeCheckoutSessionId?: string | null;
+  stripePaymentIntentId?: string | null;
+  paidAt?: string | null;
+  refundedAt?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
   event: MemberEvent;
 }

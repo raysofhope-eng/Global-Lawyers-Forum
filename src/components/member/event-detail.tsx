@@ -290,11 +290,17 @@ export function MemberEventDetail({ slug }: { slug: string }) {
               const isSoldOut = Boolean(event.capacity && paidCount >= event.capacity);
 
               if (isPaid) {
+                const isRefundedOnly = booking.status === "refunded";
                 return (
                   <div className="detail-booking-status">
                     <span className="status-badge approved" style={{ display: "inline-block", marginBottom: 12 }}>
-                      Ticket confirmed
+                      {isRefundedOnly ? "Refunded · Place retained" : "Ticket confirmed"}
                     </span>
+                    {isRefundedOnly && (
+                      <p style={{ fontSize: "0.85rem", opacity: 0.9, marginBottom: 12, color: "var(--accent-gold, #c5a059)" }}>
+                        Your payment was refunded{booking.refundedAt ? ` on ${new Date(booking.refundedAt).toLocaleDateString()}` : ""}. Your seat reservation and invitation remain confirmed.
+                      </p>
+                    )}
                     {booking.invitationCode && (
                       <p className="detail-invitation-code" style={{ fontSize: "0.85rem", opacity: 0.8, marginBottom: 12 }}>
                         Invitation: <strong>{booking.invitationCode}</strong>
@@ -307,6 +313,39 @@ export function MemberEventDetail({ slug }: { slug: string }) {
                       onClick={() => setPreview(booking)}
                     >
                       View official invitation
+                    </button>
+                  </div>
+                );
+              }
+
+              if (booking?.status === "cancelled") {
+                return (
+                  <div className="detail-booking-status" style={{ border: "1px solid rgba(220, 38, 38, 0.3)", borderRadius: "8px", padding: "16px", marginBottom: "16px", background: "rgba(220, 38, 38, 0.05)" }}>
+                    <span className="status-badge rejected" style={{ display: "inline-block", marginBottom: 8 }}>
+                      Ticket cancelled
+                    </span>
+                    <p style={{ fontSize: "0.88rem", marginBottom: 6 }}>
+                      {booking.refundedAt
+                        ? `This ticket was cancelled and refunded on ${new Date(booking.refundedAt).toLocaleDateString()}.`
+                        : "Your booking for this event was cancelled."}
+                    </p>
+                    <p className="field-hint" style={{ fontSize: "0.8rem", marginBottom: 16 }}>
+                      The previous invitation document has been revoked. If you would like to attend, you may reserve a new seat below.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn btn-gold"
+                      style={{ width: "100%" }}
+                      disabled={checkout.isPending || isSoldOut}
+                      onClick={() => checkout.mutate(event.id)}
+                    >
+                      {checkout.isPending
+                        ? "Preparing checkout…"
+                        : isSoldOut
+                          ? "Sold out"
+                          : event.feeCents
+                            ? `Book again · ${price(event)}`
+                            : "Book complimentary seat"}
                     </button>
                   </div>
                 );
@@ -398,6 +437,13 @@ export function MemberEventDetail({ slug }: { slug: string }) {
             />
           </div>
           <div className="dialog-footer">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              onClick={() => setPreview(null)}
+            >
+              Close
+            </button>
             <a
               className="btn btn-gold"
               href={`/api/member/event-bookings/${preview.id}/invitation`}
