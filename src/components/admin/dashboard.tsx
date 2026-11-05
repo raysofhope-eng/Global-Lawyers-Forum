@@ -1,290 +1,43 @@
-"use client";
-import { useState } from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api, ApiError } from "@/lib/api";
-import { statuses, type ApplicationStatus } from "@/contracts";
-import {
-  useApplication,
-  useApplications,
-  useUpdateApplication,
-} from "@/hooks/use-applications";
-export function Dashboard() {
-  const client = useQueryClient();
-  const [page, setPage] = useState(1);
-  const [status, setStatus] = useState("");
-  const [selected, setSelected] = useState("");
-  const session = useQuery({
-    queryKey: ["session"],
-    queryFn: () => api<{ id: string; email: string }>("/auth/me"),
-    retry: false,
-    staleTime: 60_000,
-  });
-  const list = useApplications(page, status, !!session.data);
-  const logout = useMutation({
-    mutationFn: () => api("/auth/logout", { method: "POST" }),
-    onSuccess: () => {
-      setSelected("");
-      client.removeQueries({ queryKey: ["applications"] });
-      client.setQueryData(["session"], null);
-    },
-  });
-  if (session.isPending) return <p role="status">Checking your session…</p>;
-  if (session.data === null) return <Login />;
-  if (session.error) {
-    if (session.error instanceof ApiError && session.error.status === 401)
-      return <Login />;
-    return (
-      <div role="alert">
-        <p>{session.error.message}</p>
-        <button className="btn btn-gold" onClick={() => session.refetch()}>
-          Retry
-        </button>
-      </div>
-    );
-  }
-  if (list.error instanceof ApiError && list.error.status === 401) {
-    return <Login />;
-  }
-  return (
-    <>
-      <div className="admin-heading">
-        <div>
-          <p className="eyebrow">Registrar workspace</p>
-          <h1>Applications</h1>
-          <p>{session.data?.email}</p>
-        </div>
-        <button
-          className="btn btn-ghost"
-          disabled={logout.isPending}
-          onClick={() => logout.mutate()}
-        >
-          Sign out
-        </button>
-      </div>
-      {logout.error && <p role="alert">{logout.error.message}</p>}
-      <div className="admin-toolbar">
-        <label htmlFor="status-filter">Status </label>
-        <select
-          id="status-filter"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value);
-            setPage(1);
-            setSelected("");
-          }}
-        >
-          <option value="">All applications</option>
-          {statuses.map((value) => (
-            <option key={value}>{value}</option>
-          ))}
-        </select>
-        <button
-          className="btn btn-ghost"
-          onClick={() => list.refetch()}
-          disabled={list.isFetching}
-        >
-          Refresh
-        </button>
-      </div>
-      <div className="admin-workspace">
-        <section aria-label="Applications list">
-          {list.isPending ? (
-            <p role="status">Loading applications…</p>
-          ) : list.error ? (
-            <p role="alert">{list.error.message}</p>
-          ) : (
-            <>
-              <p className="admin-count">
-                {list.data.total} application{list.data.total === 1 ? "" : "s"}
-              </p>
-              <div className="admin-table-wrap">
-                <table className="admin-table">
-                  <thead>
-                    <tr>
-                      <th>Applicant</th>
-                      <th>Reference</th>
-                      <th>Status</th>
-                      <th>Received</th>
-                      <th>
-                        <span className="sr-only">Review</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {list.data.items.map((item) => (
-                      <tr key={item.id}>
-                        <td>
-                          <strong>{item.name}</strong>
-                          <br />
-                          <span>{item.email}</span>
-                        </td>
-                        <td>
-                          {item.reference}
-                          <br />
-                          <small>{item.intent}</small>
-                        </td>
-                        <td>
-                          <span className={`status-badge ${item.status}`}>
-                            {item.status}
-                          </span>
-                        </td>
-                        <td>{new Date(item.createdAt).toLocaleDateString()}</td>
-                        <td>
-                          <button
-                            className="btn btn-ghost"
-                            onClick={() => setSelected(item.id)}
-                          >
-                            Review
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                    {list.data.items.length === 0 && (
-                      <tr>
-                        <td colSpan={5}>No applications match this filter.</td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-              <div className="admin-pagination">
-                <button
-                  disabled={page === 1}
-                  onClick={() => setPage((p) => p - 1)}
-                >
-                  Previous
-                </button>
-                <span>
-                  Page {page} of{" "}
-                  {Math.max(1, Math.ceil(list.data.total / list.data.pageSize))}
-                </span>
-                <button
-                  disabled={page * list.data.pageSize >= list.data.total}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            </>
-          )}
-        </section>
-        {selected && (
-          <ApplicationReview
-            key={selected}
-            id={selected}
-            close={() => setSelected("")}
-          />
-        )}
-      </div>
-    </>
-  );
+﻿'use client';
+import Link from 'next/link';
+import { useEffect,useState } from 'react';
+import { useMutation,useQuery,useQueryClient } from '@tanstack/react-query';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { api,ApiError } from '@/lib/api';
+import { statuses,membershipSchema,type ApplicationDetail,type ApplicationSummary,type Page } from '@/contracts';
+import { useSession,useSignOut } from '@/hooks/use-session';
+import { LoginForm } from '@/components/auth/login-form';
+import { Dialog } from '@/components/ui/dialog';
+import { Tabs } from '@/components/ui/tabs';
+import { FormField,profileFields } from '@/components/ui/form-field';
+import { CertificatePanel } from '@/components/documents/certificate-panel';
+export function Dashboard(){
+ const client=useQueryClient();const session=useSession();const logout=useSignOut();
+ const [page,setPage]=useState(1);const [status,setStatus]=useState('');const [search,setSearch]=useState('');const [debounced,setDebounced]=useState('');const [intent,setIntent]=useState('');const [login,setLogin]=useState('');const [from,setFrom]=useState('');const [to,setTo]=useState('');const [selected,setSelected]=useState('');
+ useEffect(()=>{const timer=setTimeout(()=>{setDebounced(search);setPage(1);},300);return()=>clearTimeout(timer);},[search]);
+ const list=useQuery({queryKey:['applications','list',page,status,debounced,intent,login,from,to],queryFn:()=>{const params=new URLSearchParams({page:String(page)});for(const [key,value]of Object.entries({status,search:debounced,intent,login,joinedFrom:from,joinedTo:to}))if(value)params.set(key,value);return api<Page<ApplicationSummary>>('/admin/applications?'+params);},enabled:session.data?.role==='admin'});
+ if(session.isPending)return <p role="status">Checking your session…</p>;
+ if(session.error){if(session.error instanceof ApiError&&session.error.status===401)return <LoginForm admin onAuthenticated={user=>client.setQueryData(['session'],user)}/>;return <p role="alert">{session.error.message}</p>;}
+ if(session.data?.role!=='admin')return <div className="empty-state"><h1>Admin access required</h1><p>Your member account can access its own portal.</p><Link className="btn btn-gold" href="/member">Open member portal</Link></div>;
+ const reset=()=>{setSearch('');setStatus('');setIntent('');setLogin('');setFrom('');setTo('');setPage(1);};
+ return <><div className="workspace-heading"><div><h1>Members & applications</h1><p>Review registrations, manage memberships and issue appointment documents.</p></div><div className="row-actions"><Link className="btn btn-ghost" href="/admin/events">Events</Link><span className="workspace-email">{session.data.email}</span><button className="btn btn-ghost" disabled={logout.isPending} onClick={()=>logout.mutate()}>Sign out</button></div></div>
+ {logout.error&&<p className="field-error" role="alert">{logout.error.message}</p>}
+ <div className="member-filters"><label className="filter-search">Search<input type="search" placeholder="Name, email, reference or designation" value={search} onChange={e=>setSearch(e.target.value)}/></label><label>Status<select value={status} onChange={e=>{setStatus(e.target.value);setPage(1);}}><option value="">All statuses</option>{statuses.map(value=><option key={value} value={value}>{value}</option>)}</select></label><label>Type<select value={intent} onChange={e=>{setIntent(e.target.value);setPage(1);}}><option value="">All registrations</option><option value="membership">Membership</option><option value="registrar">Registrar enquiry</option></select></label><label>Sign in<select value={login} onChange={e=>{setLogin(e.target.value);setPage(1);}}><option value="">Any activity</option><option value="signed-in">Has signed in</option><option value="never">Never signed in</option></select></label><label>Joined from<input type="date" value={from} max={to||undefined} onChange={e=>{setFrom(e.target.value);setPage(1);}}/></label><label>Joined to<input type="date" value={to} min={from||undefined} onChange={e=>{setTo(e.target.value);setPage(1);}}/></label><button className="text-button" onClick={reset}>Clear filters</button></div>
+ <div className="list-heading"><p>{list.data?`${list.data.total} result${list.data.total===1?'':'s'}`:'Members'}{list.isFetching&&' · Updating…'}</p><button className="text-button" disabled={list.isFetching} onClick={()=>list.refetch()}>Refresh</button></div>
+ {list.isPending?<p role="status">Loading applications…</p>:list.error?<div role="alert" className="empty-state"><p>{list.error.message}</p><button className="btn btn-ghost" onClick={()=>list.refetch()}>Retry</button></div>:<><div className="admin-table-wrap"><table className="admin-table compact-table"><thead><tr><th>Member</th><th>Reference / type</th><th>Status</th><th>Designation</th><th>Joined</th><th>Last sign in</th><th><span className="sr-only">Review</span></th></tr></thead><tbody>{list.data.items.map(item=><tr key={item.id}><td><strong>{item.name}</strong><span className="table-secondary">{item.email}</span></td><td>{item.reference}<span className="table-secondary">{item.intent}{item.hasAccount===false?' · legacy application':''}</span></td><td><span className={`status-badge ${item.status}`}>{item.status}</span></td><td>{item.designation||'Not assigned'}</td><td>{new Date(item.createdAt).toLocaleDateString()}</td><td>{item.lastLoginAt?new Date(item.lastLoginAt).toLocaleString():'Never'}</td><td><button className="btn btn-ghost" onClick={()=>setSelected(item.id)}>Review</button></td></tr>)}{!list.data.items.length&&<tr><td colSpan={7}><div className="empty-state"><p>No members match these filters.</p><button className="text-button" onClick={reset}>Clear filters</button></div></td></tr>}</tbody></table></div><div className="admin-pagination"><button disabled={page===1} onClick={()=>setPage(v=>v-1)}>Previous</button><span>Page {page} of {Math.max(1,Math.ceil(list.data.total/list.data.pageSize))}</span><button disabled={page*list.data.pageSize>=list.data.total} onClick={()=>setPage(v=>v+1)}>Next</button></div></>}
+ {selected&&<MemberReview id={selected} close={()=>setSelected('')}/>}</>;
 }
-function Login() {
-  const client = useQueryClient();
-  const mutation = useMutation({
-    mutationFn: (values: { email: string; password: string }) =>
-      api<{ id: string; email: string }>("/auth/login", {
-        method: "POST",
-        body: JSON.stringify(values),
-      }),
-    onSuccess: (data) => {
-      client.removeQueries({ queryKey: ["applications"] });
-      client.setQueryData(["session"], data);
-    },
-  });
-  return (
-    <section className="admin-login form-card">
-      <p className="eyebrow">Office of the Registrar</p>
-      <h1>Admin sign in</h1>
-      <form
-        onSubmit={(e) => {
-          e.preventDefault();
-          const values = new FormData(e.currentTarget);
-          mutation.mutate({
-            email: String(values.get("email")),
-            password: String(values.get("password")),
-          });
-        }}
-      >
-        <div className="field">
-          <label htmlFor="admin-email">Email</label>
-          <input
-            id="admin-email"
-            name="email"
-            type="email"
-            required
-            autoComplete="username"
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="admin-password">Password</label>
-          <input
-            id="admin-password"
-            name="password"
-            type="password"
-            required
-            autoComplete="current-password"
-          />
-        </div>
-        <button className="btn btn-gold" disabled={mutation.isPending}>
-          {mutation.isPending ? "Signing in…" : "Sign in"}
-        </button>
-        {mutation.error && <p role="alert">{mutation.error.message}</p>}
-      </form>
-    </section>
-  );
+function MemberReview({id,close}:{id:string;close:()=>void}){
+ const [tab,setTab]=useState('profile');const detail=useQuery({queryKey:['applications','detail',id],queryFn:()=>api<ApplicationDetail>(`/admin/applications/${id}`),staleTime:0,gcTime:0});
+ return <Dialog title={detail.data?.name||'Member details'} onClose={close}><div className="dialog-member-bar"><img src={`/api/admin/applications/${id}/photo`} width="40" height="40" alt="Member photo"/><div><strong>{detail.data?.reference||'Loading…'}</strong><span>{detail.data?.email}</span></div>{detail.data&&<span className={`status-badge ${detail.data.status}`}>{detail.data.status}</span>}</div><Tabs label="Member details" value={tab} onChange={setTab} items={[{id:'profile',label:'Profile'},{id:'membership',label:'Membership'},{id:'documents',label:'Documents'}]}/><section className="dialog-body" id={`panel-${tab}`} role="tabpanel" aria-labelledby={`tab-${tab}`}>
+ {detail.isPending?<p role="status">Loading details…</p>:detail.error?<p role="alert" className="field-error">{detail.error.message}</p>:<>{tab==='profile'&&<dl className="detail-grid">{profileFields.map(field=><div key={field.name}><dt>{field.label}</dt><dd>{detail.data[field.name]}</dd></div>)}<div className="full"><dt>Message</dt><dd>{detail.data.message}</dd></div></dl>}{tab==='membership'&&<MembershipForm id={id} detail={detail.data}/>} {tab==='documents'&&<CertificatePanel applicationId={id}/>}</>}
+ </section></Dialog>;
 }
-function ApplicationReview({ id, close }: { id: string; close: () => void }) {
-  const detail = useApplication(id);
-  const update = useUpdateApplication(id);
-  return (
-    <aside className="admin-review form-card" aria-label="Application details">
-      <div className="admin-heading">
-        <h2>Application review</h2>
-        <button type="button" className="btn btn-ghost" onClick={close}>
-          Close
-        </button>
-      </div>
-      {detail.isPending ? (
-        <p role="status">Loading details…</p>
-      ) : detail.error ? (
-        <p role="alert">{detail.error.message}</p>
-      ) : (
-        <>
-          <img
-            className="applicant-photo"
-            src={`/api/admin/applications/${id}/photo`}
-            alt={`Application photo for ${detail.data.name}`}
-            width="120"
-            height="120"
-          />
-          <dl>
-            {Object.entries(detail.data)
-              .filter(
-                ([key]) => !["id", "updatedAt", "consentAt"].includes(key),
-              )
-              .map(([key, value]) => (
-                <div key={key}>
-                  <dt>{key.replace(/([A-Z])/g, " $1")}</dt>
-                  <dd>{String(value || "—")}</dd>
-                </div>
-              ))}
-          </dl>
-          <label htmlFor="review-status">Review status</label>
-          <select
-            id="review-status"
-            value={detail.data.status}
-            disabled={update.isPending}
-            onChange={(e) => update.mutate(e.target.value as ApplicationStatus)}
-          >
-            {statuses.map((value) => (
-              <option key={value}>{value}</option>
-            ))}
-          </select>
-          {update.isPending && <p role="status">Saving…</p>}
-          {update.error && <p role="alert">{update.error.message}</p>}
-        </>
-      )}
-    </aside>
-  );
+function MembershipForm({id,detail}:{id:string;detail:ApplicationDetail}){
+ const client=useQueryClient();const [message,setMessage]=useState('');
+ const {register,handleSubmit,formState:{errors,isDirty},reset}=useForm<z.input<typeof membershipSchema>>({resolver:zodResolver(membershipSchema),defaultValues:{status:detail.status,designation:detail.designation||'',effectiveDate:detail.effectiveDate||null}});
+ const mutation=useMutation({mutationFn:(data:z.input<typeof membershipSchema>)=>api(`/admin/applications/${id}/membership`,{method:'PATCH',body:JSON.stringify(data)}),onSuccess:(_,data)=>{reset(data);setMessage('Membership updated. Draft documents now use these details.');void client.invalidateQueries({queryKey:['applications']});void client.invalidateQueries({queryKey:['certificates',id]});}});
+ return <form noValidate onSubmit={handleSubmit(data=>{setMessage('');mutation.mutate(data);})}><div className="compact-grid"><FormField id="membership-status" label="Membership status" error={errors.status?.message}><select id="membership-status" {...register('status')}>{statuses.map(status=><option key={status}>{status}</option>)}</select></FormField><FormField id="membership-designation" label="Designation" required={false} error={errors.designation?.message}><input id="membership-designation" placeholder="e.g. General Secretary" {...register('designation')}/></FormField><FormField id="membership-effectiveDate" label="Effective date" required={false} error={errors.effectiveDate?.message}><input id="membership-effectiveDate" type="date" {...register('effectiveDate',{setValueAs:value=>value||null})}/></FormField></div><p className="workspace-note">Documents can be issued once membership is approved and a designation and effective date are assigned. Changes affect drafts; issued copies remain unchanged.</p><div className="panel-actions"><button className="btn btn-gold" disabled={!isDirty||mutation.isPending}>{mutation.isPending?'Saving…':'Save membership'}</button>{message&&<p className="inline-success" role="status">{message}</p>}{mutation.error&&<p className="field-error" role="alert">{mutation.error.message}</p>}</div></form>;
 }

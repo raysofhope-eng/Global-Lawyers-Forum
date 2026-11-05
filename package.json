@@ -10,10 +10,15 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@hookform/resolvers": "^7.0.2",
+    "@stripe/react-stripe-js": "^7.0.1",
+    "@stripe/stripe-js": "^10.2.1",
     "@tanstack/react-query": "^5.90.10",
+    "docx-preview": "^0.4.1",
     "next": "^16.0.10",
     "react": "^19.2.1",
     "react-dom": "^19.2.1",
+    "react-hook-form": "^7.91.0",
     "zod": "^4.6.7"
   },
   "devDependencies": {
@@ -21,6 +26,7 @@
     "@types/node": "^22.19.0",
     "@types/react": "^19.2.2",
     "@types/react-dom": "^19.2.2",
+    "prettier": "^3.9.10",
     "typescript": "^5.9.3"
   }
 }

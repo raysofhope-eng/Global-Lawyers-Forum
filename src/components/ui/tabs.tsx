@@ -1,0 +1,4 @@
+'use client';
+export function Tabs({items,value,onChange,label}:{items:{id:string;label:string}[];value:string;onChange:(value:string)=>void;label:string}){
+ return <div className="workspace-tabs" role="tablist" aria-label={label} onKeyDown={event=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;event.preventDefault();const current=items.findIndex(item=>item.id===value);const index=event.key==='Home'?0:event.key==='End'?items.length-1:(current+(event.key==='ArrowRight'?1:-1)+items.length)%items.length;onChange(items[index].id);(event.currentTarget.children[index] as HTMLElement).focus();}}>{items.map(item=><button type="button" key={item.id} role="tab" id={`tab-${item.id}`} aria-controls={`panel-${item.id}`} aria-selected={value===item.id} tabIndex={value===item.id?0:-1} onClick={()=>onChange(item.id)}>{item.label}</button>)}</div>;
+}

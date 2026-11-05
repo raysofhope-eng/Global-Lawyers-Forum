@@ -76,8 +76,11 @@ export function Header() {
             <path d="M12 2v2M12 20v2M4 12H2M22 12h-2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19" />
           </svg>
         </button>
-        <Link href="/membership" className="btn btn-gold nav-cta">
+        <Link href="/membership#apply-form" className="btn btn-gold nav-cta">
           Join the Forum
+        </Link>
+        <Link href="/login" className="nav-login nav-cta">
+          Member sign in
         </Link>
         <button
           className="menu-toggle"
@@ -101,11 +104,14 @@ export function Header() {
       <div className={`mobile-menu${open ? " open" : ""}`} id="mobileMenu">
         <nav aria-label="Mobile primary">{nav}</nav>
         <Link
-          href="/membership"
+          href="/membership#apply-form"
           className="btn btn-gold"
           onClick={() => setOpen(false)}
         >
           Join the Forum
+        </Link>
+        <Link href="/login" className="nav-login" onClick={() => setOpen(false)}>
+          Member sign in
         </Link>
       </div>
     </header>

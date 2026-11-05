@@ -22,7 +22,7 @@ export function HomeContent() {
               the rule of law wherever it is challenged.
             </p>
             <div className="hero-cta reveal d3">
-              <Link href="/membership" className="btn btn-gold">
+              <Link href="/membership#apply-form" className="btn btn-gold">
                 Become a Member
                 <svg
                   width="16"

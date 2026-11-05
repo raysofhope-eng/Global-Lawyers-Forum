@@ -2,6 +2,7 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    public fields?:Record<string,string[]|undefined>,
   ) {
     super(message);
   }
@@ -26,6 +27,7 @@ export async function api<T>(
     throw new ApiError(
       response.status,
       data?.error || "The request failed. Please try again.",
+      data?.fields,
     );
   return data as T;
 }

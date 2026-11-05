@@ -33,7 +33,7 @@ export default function RootLayout({
         <script
           dangerouslySetInnerHTML={{
             __html:
-              "try{var t=localStorage.getItem('gla-theme');if(t==='dark'||t==='light')document.documentElement.dataset.theme=t;}catch(e){}",
+              "try{var t=localStorage.getItem('gla-theme')||'dark';document.documentElement.dataset.theme=t==='light'?'light':'dark';}catch(e){document.documentElement.dataset.theme='dark';}",
           }}
         />
       </head>
