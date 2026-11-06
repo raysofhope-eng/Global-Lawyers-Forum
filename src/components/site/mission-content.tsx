@@ -64,8 +64,8 @@ export function MissionContent() {
             className="reveal d2"
             style={{ marginTop: "56px", textAlign: "center" }}
           >
-            <Link href="/founder" className="btn btn-ghost">
-              Read a Message from the Founding President
+            <Link href="/chairman" className="btn btn-ghost">
+              Read a Message from the Chairman
               <svg
                 width="16"
                 height="16"

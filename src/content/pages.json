@@ -9,10 +9,10 @@
     "description": "The charter behind Global Lawyers Forum: uphold the rule of law, enable cross-border practice, champion human rights, and advance professional excellence.",
     "path": "/mission"
   },
-  "founder": {
-    "title": "Founding President | Global Lawyers Forum",
-    "description": "A message from Barrister Muhammad Sohail Anjum, Founder and First President of the Global Lawyers Forum.",
-    "path": "/founder"
+  "chairman": {
+    "title": "Chairman | Global Lawyers Forum",
+    "description": "A message from Barrister Muhammad Sohail Anjum, Chairman of the Global Lawyers Forum.",
+    "path": "/chairman"
   },
   "chapters": {
     "title": "Chapters | Global Lawyers Forum",

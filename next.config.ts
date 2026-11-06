@@ -14,13 +14,16 @@ const nextConfig: NextConfig = {
   async redirects() {
     const pages = [
       "mission",
-      "founder",
+      "chairman",
       "chapters",
       "leadership",
       "events",
       "membership",
     ];
     return [
+      { source: "/founder", destination: "/chairman", permanent: true },
+      { source: "/founder.html", destination: "/chairman", permanent: true },
+      { source: "/Global-Lawyers-Forum/founder.html", destination: "/chairman", permanent: true },
       { source: "/index.html", destination: "/", permanent: true },
       ...pages.map((p) => ({
         source: `/${p}.html`,

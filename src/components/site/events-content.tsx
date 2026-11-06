@@ -26,7 +26,7 @@ export function EventsContent() {
               <div className="info">
                 <h3>Inaugural Global Legal Summit</h3>
                 <p>
-                  Foundational address by the First President and the seating of
+                  Foundational address by the Chairman and the seating of
                   the eight chapters.
                 </p>
               </div>

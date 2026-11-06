@@ -64,7 +64,7 @@ export function Footer() {
         <div className="foot-col">
           <h4>Forum</h4>
           <Link href="/mission">Our Charter</Link>
-          <Link href="/founder">Founding President</Link>
+          <Link href="/chairman">Chairman</Link>
           <Link href="/leadership">Governance</Link>
           <Link href="/chapters">Chapters</Link>
         </div>

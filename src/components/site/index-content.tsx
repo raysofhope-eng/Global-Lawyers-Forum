@@ -49,7 +49,7 @@ export function HomeContent() {
               alt="Global Lawyers Forum seal"
               loading="lazy"
             />
-            <h4>Office of the Founding President</h4>
+            <h4>Office of the Chairman</h4>
             <p>
               Constituted to give the international legal profession a single,
               principled voice that answers to no government and stays faithful
@@ -57,7 +57,7 @@ export function HomeContent() {
             </p>
             <div className="sig">
               Barrister Muhammad Sohail Anjum
-              <small>Founder &amp; First President, GLF</small>
+              <small>Chairman, GLF</small>
             </div>
           </aside>
         </div>
@@ -193,19 +193,19 @@ export function HomeContent() {
                 <img
                   className="portrait-img"
                   src="/founder.jpg"
-                  alt="Barrister Muhammad Sohail Anjum, Founder and First President of the Global Lawyers Forum"
+                  alt="Barrister Muhammad Sohail Anjum, Chairman of the Global Lawyers Forum"
                   loading="lazy"
                   width="760"
                   height="950"
                 />
                 <div className="plate">
                   <div className="nm">Barrister Muhammad Sohail Anjum</div>
-                  <div className="rl">Founder &amp; First President</div>
+                  <div className="rl">Chairman</div>
                 </div>
               </div>
             </div>
             <div className="reveal d1">
-              <p className="eyebrow">The Founding President</p>
+              <p className="eyebrow">The Chairman</p>
               <blockquote className="quote" style={{ marginTop: "18px" }}>
                 <span className="mark">&ldquo;</span>The law does not stop at a
                 border, and neither should the lawyers who serve it. GLF was
@@ -213,14 +213,14 @@ export function HomeContent() {
                 <span className="mark">&rdquo;</span>
               </blockquote>
               <div className="by">
-                Barrister Muhammad Sohail Anjum, Founder &amp; First President
+                Barrister Muhammad Sohail Anjum, Chairman
               </div>
               <Link
-                href="/founder"
+                href="/chairman"
                 className="btn btn-ghost"
                 style={{ marginTop: "26px" }}
               >
-                Read the Founder's Story
+                Read the Chairman's Message
                 <svg
                   width="16"
                   height="16"

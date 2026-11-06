@@ -22,9 +22,9 @@ export function LeadershipContent() {
           <div className="gov">
             <article className="gov-card reveal">
               <div className="tier">The Presidency</div>
-              <h3>Office of the President</h3>
+              <h3>Office of the Chairman</h3>
               <ul>
-                <li>Founder &amp; First President</li>
+                <li>Chairman</li>
                 <li>Deputy President</li>
                 <li>Secretary-General</li>
                 <li>Treasurer &amp; Registrar</li>
