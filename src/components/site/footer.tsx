@@ -20,7 +20,7 @@ export function Footer() {
             Saudi Arabia, Canada, Turkey, the EU and the UAE, founded to advance
             the rule of law and give the profession one principled voice.
           </p>
-          <a className="foot-mail" href="mailto:globallawyersforum@gmail.com">
+          <a className="foot-mail" href="mailto:globallawyersforumuk@gmail.com">
             <svg
               width="15"
               height="15"
@@ -32,7 +32,7 @@ export function Footer() {
               <rect x="3" y="5" width="18" height="14" rx="1.5"></rect>
               <path d="M3 7l9 6 9-6"></path>
             </svg>
-            globallawyersforum@gmail.com
+            globallawyersforumuk@gmail.com
           </a>
 
           <div

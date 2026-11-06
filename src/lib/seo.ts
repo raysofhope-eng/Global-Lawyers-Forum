@@ -44,6 +44,6 @@ export const organization = {
   logo: new URL("/logo-badge-512.png", siteUrl).toString(),
   foundingDate: "2010",
   foundingLocation: "London, United Kingdom",
-  email: "globallawyersforum@gmail.com",
+  email: "globallawyersforumuk@gmail.com",
   description: pages.home.description,
 };

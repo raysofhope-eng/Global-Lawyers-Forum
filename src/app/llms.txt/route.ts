@@ -12,7 +12,7 @@ export function GET() {
             `- [${page.title}](${new URL(page.path, siteUrl)}): ${page.description}`,
         )
         .join("\n") +
-      "\n\nContact: globallawyersforum@gmail.com\nThe admin panel, applications, and identity documents are private.\n",
+      "\n\nContact: globallawyersforumuk@gmail.com\nThe admin panel, applications, and identity documents are private.\n",
     { headers: { "Content-Type": "text/plain; charset=utf-8" } },
   );
 }
