@@ -38,13 +38,12 @@ jobs:
         env:
           PRODUCTION_ENV: ${{ secrets.PRODUCTION_ENV }}
         run: |
-          test -n "$PRODUCTION_ENV"
-          printf '%s\n' "$PRODUCTION_ENV" > .env.production
-          chmod 600 .env.production
+          node scripts/prepare-production-env.cjs
 
       - name: Install, validate, and build
         run: |
           npm ci
+          node --test scripts/prepare-production-env.test.cjs
           npm run typecheck
           npm run build
 

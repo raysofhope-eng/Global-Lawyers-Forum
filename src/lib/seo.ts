@@ -1,9 +1,18 @@
 import type { Metadata } from "next";
 import pages from "@/content/pages.json";
-if (process.env.NODE_ENV === "production" && !process.env.SITE_URL) {
-  throw new Error("Set SITE_URL before building the production frontend.");
+export const siteUrl = new URL(
+  process.env.SITE_URL ||
+    (process.env.NODE_ENV === "production"
+      ? "https://globallawyersforum.org"
+      : "http://localhost:3000"),
+);
+if (
+  process.env.NODE_ENV === "production" &&
+  (siteUrl.protocol !== "https:" ||
+    ["localhost", "127.0.0.1"].includes(siteUrl.hostname))
+) {
+  throw new Error("Production SITE_URL must be the public HTTPS domain.");
 }
-export const siteUrl = new URL(process.env.SITE_URL || "http://localhost:3000");
 export function pageMetadata(key: keyof typeof pages): Metadata {
   const page = pages[key];
   const url = new URL(page.path, siteUrl).toString();
@@ -11,6 +20,17 @@ export function pageMetadata(key: keyof typeof pages): Metadata {
     title: page.title,
     description: page.description,
     alternates: { canonical: url },
+    robots: {
+      index: true,
+      follow: true,
+      googleBot: {
+        index: true,
+        follow: true,
+        "max-image-preview": "large",
+        "max-snippet": -1,
+        "max-video-preview": -1,
+      },
+    },
     openGraph: {
       type: "website",
       siteName: "Global Lawyers Forum",

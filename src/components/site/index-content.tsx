@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { JoinCta } from "./join-cta";
+import { GalleryHighlights } from './gallery-highlights';
 export function HomeContent() {
   return (
     <>
@@ -237,6 +238,7 @@ export function HomeContent() {
         </div>
       </section>
 
+      <GalleryHighlights />
       <JoinCta />
     </>
   );

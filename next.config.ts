@@ -19,11 +19,22 @@ const nextConfig: NextConfig = {
       "leadership",
       "events",
       "membership",
+      "gallery",
     ];
     return [
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.globallawyersforum.org" }],
+        destination: "https://globallawyersforum.org/:path*",
+        permanent: true,
+      },
       { source: "/founder", destination: "/chairman", permanent: true },
       { source: "/founder.html", destination: "/chairman", permanent: true },
-      { source: "/Global-Lawyers-Forum/founder.html", destination: "/chairman", permanent: true },
+      {
+        source: "/Global-Lawyers-Forum/founder.html",
+        destination: "/chairman",
+        permanent: true,
+      },
       { source: "/index.html", destination: "/", permanent: true },
       ...pages.map((p) => ({
         source: `/${p}.html`,
@@ -73,10 +84,11 @@ const nextConfig: NextConfig = {
       },
       {
         source: "/api/:path*",
-        headers: [
-          { key: "X-Robots-Tag", value: "noindex, nofollow" },
-          { key: "Cache-Control", value: "private, no-store" },
-        ],
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/api/gallery/:albumId/images/:imageId",
+        headers: [{ key: "X-Robots-Tag", value: "index, follow" }],
       },
     ];
   },

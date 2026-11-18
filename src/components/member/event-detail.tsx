@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
+import { RefundPolicy, RefundSummary } from "./refund-policy";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { loadStripe } from "@stripe/stripe-js";
+import { stripePromise } from "@/lib/stripe";
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -10,16 +11,6 @@ import {
 import { api } from "@/lib/api";
 import type { EventBooking, MemberEvent } from "@/contracts";
 import { Dialog } from "@/components/ui/dialog";
-
-const publishableKey =
-  (process.env.NEXT_PUBLIC_STRIPE_MODE === "test"
-    ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
-    : (process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE
-        : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST)) ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
 
 const price = (event: MemberEvent) =>
   event.feeCents
@@ -54,7 +45,11 @@ export function MemberEventDetail({ slug }: { slug: string }) {
   useEffect(() => {
     if (typeof window !== "undefined" && !autoOpenedRef.current) {
       const params = new URLSearchParams(window.location.search);
-      if (params.get("event") === "complete" && bookings.data?.length && event) {
+      if (
+        params.get("event") === "complete" &&
+        bookings.data?.length &&
+        event
+      ) {
         autoOpenedRef.current = true;
         const found = bookings.data.find(
           (b) => b.eventId === event.id && b.status === "paid",
@@ -280,29 +275,69 @@ export function MemberEventDetail({ slug }: { slug: string }) {
                 </div>
               )}
             </dl>
+            {event.feeCents > 0 && (
+              <RefundPolicy
+                feeCents={event.feeCents}
+                currency={event.currency}
+              />
+            )}
             {(() => {
-              const booking = bookings.data?.find((b) => b.eventId === event.id);
-              const isPaid = booking && ["paid", "refunded"].includes(booking.status);
+              const booking = bookings.data?.find(
+                (b) => b.eventId === event.id,
+              );
+              const isPaid =
+                booking && ["paid", "refunded"].includes(booking.status);
               const isPending = booking?.status === "pending";
-              const paidCount = bookings.data?.filter(
-                (b) => b.eventId === event.id && b.status === "paid",
-              ).length || 0;
-              const isSoldOut = Boolean(event.capacity && paidCount >= event.capacity);
+              const paidCount =
+                bookings.data?.filter(
+                  (b) => b.eventId === event.id && b.status === "paid",
+                ).length || 0;
+              const isSoldOut = Boolean(
+                event.capacity && paidCount >= event.capacity,
+              );
 
               if (isPaid) {
                 const isRefundedOnly = booking.status === "refunded";
                 return (
                   <div className="detail-booking-status">
-                    <span className="status-badge approved" style={{ display: "inline-block", marginBottom: 12 }}>
-                      {isRefundedOnly ? "Refunded · Place retained" : "Ticket confirmed"}
+                    <span
+                      className="status-badge approved"
+                      style={{ display: "inline-block", marginBottom: 12 }}
+                    >
+                      {isRefundedOnly
+                        ? "Refunded · Place retained"
+                        : "Ticket confirmed"}
                     </span>
+                    <RefundSummary booking={booking} />
                     {isRefundedOnly && (
-                      <p style={{ fontSize: "0.85rem", opacity: 0.9, marginBottom: 12, color: "var(--accent-gold, #c5a059)" }}>
-                        Your payment was refunded{booking.refundedAt ? ` on ${new Date(booking.refundedAt).toLocaleDateString()}` : ""}. Your seat reservation and invitation remain confirmed.
+                      <p
+                        style={{
+                          fontSize: "0.85rem",
+                          opacity: 0.9,
+                          marginBottom: 12,
+                          color: "var(--accent-gold, #c5a059)",
+                        }}
+                      >
+                        Your refund was{" "}
+                        {booking.refundStatus === "pending" ||
+                        booking.refundStatus === "requires_action"
+                          ? "requested"
+                          : "processed"}
+                        {booking.refundedAt
+                          ? ` on ${new Date(booking.refundedAt).toLocaleDateString()}`
+                          : ""}
+                        . Your seat reservation and invitation remain confirmed.
                       </p>
                     )}
                     {booking.invitationCode && (
-                      <p className="detail-invitation-code" style={{ fontSize: "0.85rem", opacity: 0.8, marginBottom: 12 }}>
+                      <p
+                        className="detail-invitation-code"
+                        style={{
+                          fontSize: "0.85rem",
+                          opacity: 0.8,
+                          marginBottom: 12,
+                        }}
+                      >
                         Invitation: <strong>{booking.invitationCode}</strong>
                       </p>
                     )}
@@ -320,17 +355,33 @@ export function MemberEventDetail({ slug }: { slug: string }) {
 
               if (booking?.status === "cancelled") {
                 return (
-                  <div className="detail-booking-status" style={{ border: "1px solid rgba(220, 38, 38, 0.3)", borderRadius: "8px", padding: "16px", marginBottom: "16px", background: "rgba(220, 38, 38, 0.05)" }}>
-                    <span className="status-badge rejected" style={{ display: "inline-block", marginBottom: 8 }}>
+                  <div
+                    className="detail-booking-status"
+                    style={{
+                      border: "1px solid rgba(220, 38, 38, 0.3)",
+                      borderRadius: "8px",
+                      padding: "16px",
+                      marginBottom: "16px",
+                      background: "rgba(220, 38, 38, 0.05)",
+                    }}
+                  >
+                    <span
+                      className="status-badge rejected"
+                      style={{ display: "inline-block", marginBottom: 8 }}
+                    >
                       Ticket cancelled
                     </span>
                     <p style={{ fontSize: "0.88rem", marginBottom: 6 }}>
                       {booking.refundedAt
-                        ? `This ticket was cancelled and refunded on ${new Date(booking.refundedAt).toLocaleDateString()}.`
+                        ? `This ticket was cancelled. Refund ${booking.refundStatus === "succeeded" ? "processed" : "requested"} on ${new Date(booking.refundedAt).toLocaleDateString()}.`
                         : "Your booking for this event was cancelled."}
                     </p>
-                    <p className="field-hint" style={{ fontSize: "0.8rem", marginBottom: 16 }}>
-                      The previous invitation document has been revoked. If you would like to attend, you may reserve a new seat below.
+                    <p
+                      className="field-hint"
+                      style={{ fontSize: "0.8rem", marginBottom: 16 }}
+                    >
+                      The previous invitation document has been revoked. If you
+                      would like to attend, you may reserve a new seat below.
                     </p>
                     <button
                       type="button"
@@ -354,11 +405,21 @@ export function MemberEventDetail({ slug }: { slug: string }) {
               if (isPending) {
                 return (
                   <div className="detail-booking-status">
-                    <span className="status-badge reviewing" style={{ display: "inline-block", marginBottom: 8 }}>
+                    <span
+                      className="status-badge reviewing"
+                      style={{ display: "inline-block", marginBottom: 8 }}
+                    >
                       Payment pending
                     </span>
-                    <p style={{ fontSize: "0.85rem", opacity: 0.8, marginBottom: 12 }}>
-                      Your reservation is held. Click below to complete checkout.
+                    <p
+                      style={{
+                        fontSize: "0.85rem",
+                        opacity: 0.8,
+                        marginBottom: 12,
+                      }}
+                    >
+                      Your reservation is held. Click below to complete
+                      checkout.
                     </p>
                     <button
                       type="button"
@@ -367,7 +428,9 @@ export function MemberEventDetail({ slug }: { slug: string }) {
                       disabled={checkout.isPending}
                       onClick={() => checkout.mutate(event.id)}
                     >
-                      {checkout.isPending ? "Preparing checkout…" : "Complete payment"}
+                      {checkout.isPending
+                        ? "Preparing checkout…"
+                        : "Complete payment"}
                     </button>
                   </div>
                 );
@@ -412,6 +475,7 @@ export function MemberEventDetail({ slug }: { slug: string }) {
           wide
         >
           <div className="dialog-body stripe-checkout">
+            <RefundPolicy />
             <EmbeddedCheckoutProvider
               stripe={stripePromise}
               options={{ clientSecret }}

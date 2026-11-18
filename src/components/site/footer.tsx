@@ -72,6 +72,7 @@ export function Footer() {
           <h4>Engage</h4>
           <Link href="/membership">Membership</Link>
           <Link href="/events">Events &amp; Summits</Link>
+          <Link href="/gallery">Gallery</Link>
           <Link href="/membership#benefits">Find a Lawyer</Link>
           <Link href="/membership?intent=registrar#apply-form">
             Contact the Registrar
@@ -89,7 +90,7 @@ export function Footer() {
         <span>
           &copy; 2010&ndash;2026 Global Lawyers Forum. All rights reserved.
         </span>
-        <span className="dom">globallawyersforum.com</span>
+        <span className="dom">globallawyersforum.org</span>
         <span>
           London &middot; New York &middot; Islamabad &middot; Riyadh &middot;
           Toronto &middot; Istanbul &middot; Brussels &middot; Dubai

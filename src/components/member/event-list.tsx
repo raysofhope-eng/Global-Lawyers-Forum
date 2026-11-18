@@ -1,8 +1,9 @@
 "use client";
 import Link from "next/link";
+import { RefundPolicy, RefundSummary } from "./refund-policy";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { loadStripe } from "@stripe/stripe-js";
+import { stripePromise } from "@/lib/stripe";
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -12,15 +13,7 @@ import type { EventBooking, MemberEvent } from "@/contracts";
 import { Dialog } from "@/components/ui/dialog";
 
 const pageSize = 6;
-const publishableKey =
-  (process.env.NEXT_PUBLIC_STRIPE_MODE === "test"
-    ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST
-    : (process.env.NODE_ENV === "production"
-        ? process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE
-        : process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST)) ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_TEST ||
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY_LIVE;
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+
 const price = (event: MemberEvent) =>
   event.feeCents
     ? new Intl.NumberFormat(undefined, {
@@ -44,7 +37,8 @@ export function MemberEventList() {
     queryKey: ["member", "event-bookings"],
     queryFn: () => api<EventBooking[]>("/member/event-bookings"),
     refetchInterval: (query) =>
-      clientSecret && query.state.data?.some((item) => item.status === "pending")
+      clientSecret &&
+      query.state.data?.some((item) => item.status === "pending")
         ? 3000
         : false,
   });
@@ -153,6 +147,7 @@ export function MemberEventList() {
           wide
         >
           <div className="dialog-body stripe-checkout">
+            <RefundPolicy />
             <EmbeddedCheckoutProvider
               stripe={stripePromise}
               options={{ clientSecret }}
@@ -188,7 +183,8 @@ export function MemberEventList() {
         </Dialog>
       )}
       {typeof window !== "undefined" &&
-        new URLSearchParams(window.location.search).get("event") === "complete" && (
+        new URLSearchParams(window.location.search).get("event") ===
+          "complete" && (
           <div
             className="status-banner"
             style={{
@@ -210,7 +206,8 @@ export function MemberEventList() {
               Payment Confirmed
             </strong>
             <p style={{ margin: 0, fontSize: "0.9rem", opacity: 0.9 }}>
-              Your seat reservation is confirmed. Your official invitation document is ready below.
+              Your seat reservation is confirmed. Your official invitation
+              document is ready below.
             </p>
           </div>
         )}
@@ -224,21 +221,38 @@ export function MemberEventList() {
               <article className="issued-row" key={item.id}>
                 <div>
                   <strong>{item.event.name}</strong>
+                  <RefundSummary booking={item} />
                   <p>
                     {new Date(item.event.startsAt).toLocaleString()} ·{" "}
                     {item.event.format === "online"
                       ? "Online"
                       : item.event.country}
                   </p>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginTop: "4px",
+                    }}
+                  >
                     <span className="status-badge approved">
-                      {item.status === "paid" ? "Confirmed" : "Refunded · Place retained"}
+                      {item.status === "paid"
+                        ? "Confirmed"
+                        : "Refunded · Place retained"}
                     </span>
                     {item.status === "refunded" && (
-                      <span style={{ fontSize: "0.85rem", color: "var(--accent-gold, #c5a059)" }}>
+                      <span
+                        style={{
+                          fontSize: "0.85rem",
+                          color: "var(--accent-gold, #c5a059)",
+                        }}
+                      >
                         {item.refundedAt
-                          ? `Payment refunded on ${new Date(item.refundedAt).toLocaleDateString()}`
-                          : "Payment refunded"} (Official invitation remains valid)
+                          ? `Refund ${item.refundStatus === "pending" || item.refundStatus === "requires_action" ? "requested" : "recorded"} on ${new Date(item.refundedAt).toLocaleDateString()}`
+                          : "Payment refunded"}{" "}
+                        (Official invitation remains valid)
                       </span>
                     )}
                   </div>
@@ -270,22 +284,37 @@ export function MemberEventList() {
           </div>
           <div className="issued-list">
             {cancelled.map((item) => (
-              <article className="issued-row" key={item.id} style={{ opacity: 0.9, borderLeft: "3px solid #dc2626" }}>
+              <article
+                className="issued-row"
+                key={item.id}
+                style={{ opacity: 0.9, borderLeft: "3px solid #dc2626" }}
+              >
                 <div>
                   <strong>{item.event.name}</strong>
+                  <RefundSummary booking={item} />
                   <p>
                     {new Date(item.event.startsAt).toLocaleString()} ·{" "}
                     {item.event.format === "online"
                       ? "Online"
                       : item.event.country}
                   </p>
-                  <div style={{ display: "flex", gap: "8px", alignItems: "center", flexWrap: "wrap", marginTop: "4px" }}>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: "8px",
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                      marginTop: "4px",
+                    }}
+                  >
                     <span className="status-badge rejected">
-                      {item.refundedAt ? "Refunded & Cancelled" : "Cancelled"}
+                      {item.refundedAt
+                        ? "Refund requested & Cancelled"
+                        : "Cancelled"}
                     </span>
                     <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>
                       {item.refundedAt
-                        ? `Refund of ${price(item.event)} processed on ${new Date(item.refundedAt).toLocaleDateString()}`
+                        ? `Refund of ${new Intl.NumberFormat("en-US", { style: "currency", currency: item.currency.toUpperCase() }).format((item.refundAmountCents ?? item.feeCents) / 100)} ${item.refundStatus === "succeeded" ? "processed" : "requested"} on ${new Date(item.refundedAt).toLocaleDateString()}`
                         : "Ticket reservation cancelled"}
                     </span>
                   </div>
@@ -408,6 +437,12 @@ export function MemberEventList() {
                     </p>
                     <div className="compact-event-footer">
                       <strong>{price(event)}</strong>
+                      {event.feeCents > 0 && (
+                        <RefundPolicy
+                          feeCents={event.feeCents}
+                          currency={event.currency}
+                        />
+                      )}
                       <div className="row-actions">
                         <Link
                           className="btn btn-ghost"
@@ -415,7 +450,8 @@ export function MemberEventList() {
                         >
                           Details
                         </Link>
-                        {own?.status === "paid" || own?.status === "refunded" ? (
+                        {own?.status === "paid" ||
+                        own?.status === "refunded" ? (
                           <button
                             className="btn btn-gold"
                             onClick={() => setPreview(own)}

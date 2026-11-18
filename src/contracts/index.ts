@@ -31,10 +31,10 @@ export const applicationSchema = z.object({
       return count >= 7 && count <= 15;
     }, "Use 7 to 15 phone digits."),
   cnic: text(80, 4),
-  passport: text(80, 4),
-  barLicense: text(200, 3),
-  parentBar: text(200, 3),
-  message: text(5000),
+  passport: text(80, 0).default(""),
+  barLicense: text(200, 0).default(""),
+  parentBar: text(200, 0).default(""),
+  message: text(5000, 0).default(""),
   consent: z.literal(true),
   website: z.string().max(0).optional(),
 });
@@ -61,7 +61,14 @@ export const loginSchema = z.object({
   email: z.string().trim().email().max(254).toLowerCase(),
   password: z.string().min(1).max(200),
 });
-export const certificateTypes = ["appointment", "notification"] as const;
+export const certificateTypes = [
+  "appointment",
+  "notification",
+  "membership",
+  "membership-notice",
+  "chair-appointment",
+  "chair-notification",
+] as const;
 export type CertificateType = (typeof certificateTypes)[number];
 export const dateSchema = z
   .string()
@@ -101,12 +108,14 @@ export const passwordChangeSchema = z
     message: "Passwords do not match.",
   });
 export interface SessionUser {
+  canAssignDesignations?: boolean;
   id: string;
   email: string;
   role: "admin" | "member";
   applicationId: string | null;
 }
 export interface CertificateSummary {
+  signer: "chairman" | "secretary";
   id: string;
   type: CertificateType;
   version: number;
@@ -127,6 +136,10 @@ export interface CertificateDraft {
 export type ApplicationInput = z.infer<typeof applicationSchema>;
 export type ApplicationStatus = (typeof statuses)[number];
 export interface ApplicationSummary {
+  membershipStartsOn: string | null;
+  membershipEndsOn: string | null;
+  designationEndsOn: string | null;
+  designationSigner: "chairman" | "secretary" | null;
   id: string;
   reference: string;
   name: string;
@@ -153,6 +166,25 @@ export interface Page<T> {
   total: number;
   page: number;
   pageSize: number;
+}
+export interface GalleryImage {
+  id: string;
+  albumId: string;
+  altText: string;
+  width: number;
+  height: number;
+  position: number;
+}
+export interface GalleryAlbum {
+  id: string;
+  name: string;
+  description: string;
+  eventDate: string | null;
+  published: boolean;
+  featured: boolean;
+  position: number;
+  images: GalleryImage[];
+  imageCount: number;
 }
 export interface EventImage {
   id: string;
@@ -209,6 +241,9 @@ export interface MemberEvent {
   speakers: EventSpeaker[];
 }
 export interface EventBooking {
+  refundAmountCents?: number | null;
+  refundFeeCents?: number | null;
+  refundStatus?: string | null;
   id: string;
   eventId: string;
   status: "pending" | "paid" | "refunded" | "cancelled";

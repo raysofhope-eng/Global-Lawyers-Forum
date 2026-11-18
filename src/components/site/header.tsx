@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
-const links = ["Mission", "Chapters", "Leadership", "Events", "Membership"];
+const links = ["Mission", "Chapters", "Leadership", "Events", "Gallery", "Membership"];
 export function Header() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);

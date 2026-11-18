@@ -20,14 +20,19 @@
     "path": "/chapters"
   },
   "leadership": {
-    "title": "Leadership &amp; Governance | Global Lawyers Forum",
+    "title": "Leadership & Governance | Global Lawyers Forum",
     "description": "How Global Lawyers Forum is governed: the Presidency, the Bench of chapter presidents, and the Council of Benchers.",
     "path": "/leadership"
   },
   "events": {
-    "title": "Events &amp; Summits | Global Lawyers Forum",
+    "title": "Events & Summits | Global Lawyers Forum",
     "description": "Upcoming Global Lawyers Forum convenings, including the Global Legal Summit and regional roundtables.",
     "path": "/events"
+  },
+  "gallery": {
+    "title": "Event Gallery | Global Lawyers Forum",
+    "description": "Explore photographs from Global Lawyers Forum events, gatherings and international legal convenings. Discover the people and moments behind justice without borders.",
+    "path": "/gallery"
   },
   "membership": {
     "title": "Membership | Global Lawyers Forum",

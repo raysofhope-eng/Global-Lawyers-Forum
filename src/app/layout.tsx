@@ -1,9 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import "../app.css";
+import '../gallery.css';
 import { siteUrl } from "@/lib/seo";
 export const metadata: Metadata = {
   metadataBase: siteUrl,
   applicationName: "Global Lawyers Forum",
+  verification: {google:'p4y64IpJs84MTBiq6TQ8uGMQEITwRubLwG_wgfn6zTg'},
   icons: { icon: "/logo-badge-64.png", apple: "/logo-badge-180.png" },
   manifest: "/manifest.webmanifest",
 };

@@ -18,6 +18,7 @@ import type {
   EventTopic,
   MemberEvent,
 } from "@/contracts";
+import { formatAmount, refundAmount } from "@/lib/refund-policy";
 import { Dialog } from "@/components/ui/dialog";
 import { z } from "zod";
 
@@ -27,6 +28,9 @@ type Booking = {
   feeCents: number;
   currency: string;
   paidAt: string | null;
+  refundAmountCents?: number | null;
+  refundFeeCents?: number | null;
+  refundStatus?: string | null;
   application: { name: string; email: string };
 };
 type TopicInput = Omit<EventTopic, "id">;
@@ -214,6 +218,16 @@ export function AdminEvents() {
   const [edit, setEdit] = useState<MemberEvent | null | undefined>();
   const [attendees, setAttendees] = useState<MemberEvent | null>(null);
   const [deleting, setDeleting] = useState<MemberEvent | null>(null);
+  const [deleteName, setDeleteName] = useState("");
+  const [cancelling, setCancelling] = useState<MemberEvent | null>(null);
+  const cancel = useMutation({
+    mutationFn: (id: string) =>
+      api(`/admin/events/${id}/cancel`, { method: "POST" }),
+    onSuccess: () => {
+      setCancelling(null);
+      void client.invalidateQueries({ queryKey: ["admin", "events"] });
+    },
+  });
   const query = useQuery({
     queryKey: ["admin", "events"],
     queryFn: () => api<MemberEvent[]>("/admin/events"),
@@ -221,14 +235,20 @@ export function AdminEvents() {
   });
   const remove = useMutation({
     mutationFn: (id: string) =>
-      api("/admin/events/" + id, { method: "DELETE" }),
+      api("/admin/events/" + id + "/permanent", { method: "DELETE" }),
     onSuccess: () => {
       setDeleting(null);
       void client.invalidateQueries({ queryKey: ["admin", "events"] });
     },
   });
   const changeStatus = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: MemberEvent["status"] }) =>
+    mutationFn: ({
+      id,
+      status,
+    }: {
+      id: string;
+      status: MemberEvent["status"];
+    }) =>
       api(`/admin/events/${id}/status`, {
         method: "PATCH",
         body: JSON.stringify({ status }),
@@ -344,7 +364,12 @@ export function AdminEvents() {
                       aria-label={`Status for ${event.name}`}
                       value={event.status}
                       disabled={changeStatus.isPending}
-                      onChange={(input) => changeStatus.mutate({ id: event.id, status: input.target.value as MemberEvent["status"] })}
+                      onChange={(input) =>
+                        changeStatus.mutate({
+                          id: event.id,
+                          status: input.target.value as MemberEvent["status"],
+                        })
+                      }
                     >
                       <option value="draft">Draft</option>
                       <option value="published">Published</option>
@@ -365,11 +390,26 @@ export function AdminEvents() {
                       >
                         Edit
                       </button>
+                      {event.status !== "cancelled" && (
+                        <button
+                          className="text-button"
+                          onClick={() => {
+                            cancel.reset();
+                            setCancelling(event);
+                          }}
+                        >
+                          Cancel event
+                        </button>
+                      )}
                       <button
                         className="text-button danger"
-                        onClick={() => setDeleting(event)}
+                        onClick={() => {
+                          setDeleteName("");
+                          remove.reset();
+                          setDeleting(event);
+                        }}
                       >
-                        Delete
+                        Delete permanently
                       </button>
                     </div>
                   </td>
@@ -400,22 +440,60 @@ export function AdminEvents() {
       {attendees && (
         <Bookings event={attendees} close={() => setAttendees(null)} />
       )}
+      {cancelling && (
+        <Dialog
+          title="Cancel event?"
+          onClose={() => {
+            if (!cancel.isPending) setCancelling(null);
+          }}
+        >
+          <div className="dialog-body">
+            <p>
+              {cancelling.name} will move to Cancelled. Its bookings and payment
+              history remain available. Members with confirmed bookings will be
+              notified; refunds are managed separately.
+            </p>
+            {cancel.error && <p role="alert">{cancel.error.message}</p>}
+          </div>
+          <div className="dialog-footer">
+            <button
+              className="btn btn-ghost"
+              disabled={cancel.isPending}
+              onClick={() => setCancelling(null)}
+            >
+              Keep event
+            </button>
+            <button
+              className="btn btn-gold"
+              disabled={cancel.isPending}
+              onClick={() => cancel.mutate(cancelling.id)}
+            >
+              {cancel.isPending ? "Cancelling..." : "Cancel event"}
+            </button>
+          </div>
+        </Dialog>
+      )}
       {deleting && (
         <Dialog
-          title={
-            deleting.status === "published"
-              ? "Cancel this event?"
-              : "Delete this event?"
-          }
+          title="Delete event permanently?"
           onClose={() => !remove.isPending && setDeleting(null)}
         >
           <div className="dialog-body">
             <p>
-              <strong>{deleting.name}</strong>{" "}
-              {deleting.status === "published"
-                ? "will be cancelled if bookings exist, and affected members will be notified."
-                : "will be permanently removed if it has no bookings."}
+              <strong>{deleting.name}</strong> will be permanently removed,
+              along with its bookings, invitations and event images. Cancel
+              events with bookings and refund outstanding payments first.
+              Unfinished checkouts will be closed. Stripe keeps its payment
+              records.
             </p>
+            <label className="field">
+              Type the event name to confirm
+              <input
+                value={deleteName}
+                onChange={(e) => setDeleteName(e.target.value)}
+                autoComplete="off"
+              />
+            </label>
             {remove.error && (
               <p className="field-error">{remove.error.message}</p>
             )}
@@ -430,14 +508,10 @@ export function AdminEvents() {
             </button>
             <button
               className="btn btn-danger"
-              disabled={remove.isPending}
+              disabled={remove.isPending || deleteName !== deleting.name}
               onClick={() => remove.mutate(deleting.id)}
             >
-              {remove.isPending
-                ? "Processing…"
-                : deleting.status === "published"
-                  ? "Cancel event"
-                  : "Delete event"}
+              {remove.isPending ? "Deleting..." : "Delete permanently"}
             </button>
           </div>
         </Dialog>
@@ -916,7 +990,8 @@ function EventForm({
                     onChange={(e) => {
                       const files = Array.from(e.target.files || []);
                       if (
-                        existingImages.length + images.length + files.length > 10 ||
+                        existingImages.length + images.length + files.length >
+                          10 ||
                         files.some((file) => file.size > 12 * 1024 * 1024)
                       ) {
                         setError(
@@ -1378,17 +1453,36 @@ function Bookings({ event, close }: { event: MemberEvent; close: () => void }) {
     queryFn: () => api<Booking[]>(`/admin/events/${event.id}/bookings`),
   });
   const refund = useMutation({
-    mutationFn: ({ id, cancelBooking }: { id: string; cancelBooking: boolean }) =>
-      api<{ status: "refunded" | "cancelled"; refundId: string }>(`/admin/bookings/${id}/refund`, {
+    mutationFn: ({
+      id,
+      cancelBooking,
+    }: {
+      id: string;
+      cancelBooking: boolean;
+    }) =>
+      api<{
+        status: "refunded" | "cancelled";
+        refundId: string;
+        refundStatus: string;
+        refundAmountCents: number;
+        refundFeeCents: number;
+      }>(`/admin/bookings/${id}/refund`, {
         method: "POST",
         body: JSON.stringify({ cancelBooking }),
       }),
     onSuccess: (result, variables) => {
       queryClient.setQueryData<Booking[]>(
         ["admin", "event-bookings", event.id],
-        (current) => current?.map((booking) => booking.id === variables.id ? { ...booking, status: result.status } : booking),
+        (current) =>
+          current?.map((booking) =>
+            booking.id === variables.id
+              ? { ...booking, status: result.status }
+              : booking,
+          ),
       );
-      setNotice(result.status === "cancelled" ? `Refund confirmed. The booking and invitation were cancelled. Stripe reference: ${result.refundId}` : `Refund confirmed. The booking and invitation remain valid. Stripe reference: ${result.refundId}`);
+      setNotice(
+        `Refund ${result.refundStatus}: ${formatAmount(result.refundAmountCents, event.currency)} ${result.refundStatus === "succeeded" ? "refunded" : "refund requested"}, ${formatAmount(result.refundFeeCents, event.currency)} refund fee deducted. ${result.status === "cancelled" ? "Booking and invitation cancelled." : "Place and invitation retained."} Reference: ${result.refundId}`,
+      );
       setSelected(null);
       void query.refetch();
     },
@@ -1397,7 +1491,11 @@ function Bookings({ event, close }: { event: MemberEvent; close: () => void }) {
     <>
       <Dialog title={`${event.name} · Bookings`} onClose={close} wide>
         <div className="dialog-body">
-          {notice && <p className="inline-success refund-notice" role="status">{notice}</p>}
+          {notice && (
+            <p className="inline-success refund-notice" role="status">
+              {notice}
+            </p>
+          )}
           {query.isPending ? (
             <p role="status">Loading bookings…</p>
           ) : query.data?.length ? (
@@ -1428,21 +1526,34 @@ function Bookings({ event, close }: { event: MemberEvent; close: () => void }) {
                           {booking.status}
                         </span>
                       </td>
-                      <td>{money(booking.feeCents, booking.currency)}</td>
+                      <td>
+                        {money(booking.feeCents, booking.currency)}
+                        {booking.refundAmountCents != null && (
+                          <span className="table-secondary">
+                            Refund:{" "}
+                            {money(booking.refundAmountCents, booking.currency)}{" "}
+                            - {booking.refundStatus}
+                          </span>
+                        )}
+                      </td>
                       <td>
                         {booking.paidAt
                           ? new Date(booking.paidAt).toLocaleDateString()
                           : "—"}
                       </td>
                       <td>
-                        {booking.status === "paid" && booking.feeCents > 0 && (
-                          <button
-                            className="text-button danger"
-                            onClick={() => setSelected(booking)}
-                          >
-                            Refund
-                          </button>
-                        )}
+                        {(booking.status === "paid" ||
+                          ["failed", "canceled"].includes(
+                            booking.refundStatus || "",
+                          )) &&
+                          booking.feeCents > 0 && (
+                            <button
+                              className="text-button danger"
+                              onClick={() => setSelected(booking)}
+                            >
+                              Refund
+                            </button>
+                          )}
                       </td>
                     </tr>
                   ))}
@@ -1464,13 +1575,26 @@ function Bookings({ event, close }: { event: MemberEvent; close: () => void }) {
           <div className="dialog-body">
             <p>
               Refund{" "}
-              <strong>{money(selected.feeCents, selected.currency)}</strong> to{" "}
-              <strong>{selected.application.name}</strong>? Stripe will return
-              the funds to the original payment method.
+              <strong>
+                {money(refundAmount(selected.feeCents), selected.currency)}
+              </strong>{" "}
+              (75%) to <strong>{selected.application.name}</strong>? Stripe will
+              return the funds to the original payment method.
             </p>
+            {selected.feeCents > 0 && (
+              <p className="workspace-note">
+                A 25% refund fee of{" "}
+                {money(
+                  selected.feeCents - refundAmount(selected.feeCents),
+                  selected.currency,
+                )}{" "}
+                will be deducted from the original{" "}
+                {money(selected.feeCents, selected.currency)} payment.
+              </p>
+            )}
             <p className="field-hint">
-              Choose whether the member keeps their confirmed place and invitation,
-              or whether the booking should also be cancelled.
+              Choose whether the member keeps their confirmed place and
+              invitation, or whether the booking should also be cancelled.
             </p>
             {refund.error && (
               <p className="field-error">{refund.error.message}</p>
@@ -1486,17 +1610,29 @@ function Bookings({ event, close }: { event: MemberEvent; close: () => void }) {
             </button>
             <button
               className="btn btn-ghost"
-              onClick={() => refund.mutate({ id: selected.id, cancelBooking: false })}
+              onClick={() =>
+                refund.mutate({ id: selected.id, cancelBooking: false })
+              }
               disabled={refund.isPending}
             >
-              {refund.isPending ? "Processing…" : "Refund only · keep invitation"}
+              {refund.isPending
+                ? "Processing…"
+                : selected.feeCents
+                  ? "Refund 75% - keep invitation"
+                  : "Keep reservation"}
             </button>
             <button
               className="btn btn-danger"
-              onClick={() => refund.mutate({ id: selected.id, cancelBooking: true })}
+              onClick={() =>
+                refund.mutate({ id: selected.id, cancelBooking: true })
+              }
               disabled={refund.isPending}
             >
-              {refund.isPending ? "Processing…" : "Refund & cancel booking"}
+              {refund.isPending
+                ? "Processing…"
+                : selected.feeCents
+                  ? "Refund 75% & cancel booking"
+                  : "Cancel reservation"}
             </button>
           </div>
         </Dialog>
