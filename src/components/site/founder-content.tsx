@@ -23,7 +23,7 @@ export function FounderContent() {
               <div className="portrait">
                 <img
                   className="portrait-img"
-                  src="/founder.jpg"
+                  src="/founder.jpeg"
                   alt="Barrister Muhammad Sohail Anjum, Chairman of the Global Lawyers Forum"
                   loading="lazy"
                   width="760"
