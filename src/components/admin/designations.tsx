@@ -213,7 +213,7 @@ export function AppointmentWorkspace({
                           )}
                         </td>
                         <td data-label="Current designation">
-                          {member.designation || "No designation"}
+                          {member.designation.trim() || "Member"}
                           {member.designationEndsOn &&
                             member.designationEndsOn <
                               new Date().toISOString().slice(0, 10) && (
@@ -329,14 +329,14 @@ function Appointment({
     id = useId(),
     authority = chairman ? "chairman" : "secretary",
     office = chairman ? "Chairman" : "General Secretary";
-  const [designation, setDesignation] = useState(member.designation || ""),
+  const [designation, setDesignation] = useState(member.designation.trim()),
     [date, setDate] = useState(
       member.effectiveDate || new Date().toISOString().slice(0, 10),
     ),
     [saved, setSaved] = useState(false);
   const [snapshot, setSnapshot] = useState({
-    designation: member.designation || "",
-    date: member.effectiveDate || "",
+    designation: member.designation.trim(),
+    date: member.designation.trim() ? member.effectiveDate || "" : "",
     signer: member.designationSigner,
   });
   const dirty =
@@ -403,11 +403,7 @@ function Appointment({
                 value={designation}
                 maxLength={120}
                 minLength={2}
-                placeholder={
-                  chairman
-                    ? "e.g. General Secretary"
-                    : "e.g. Chapter Coordinator"
-                }
+                placeholder="Member"
                 onChange={(event) => {
                   setDesignation(event.target.value);
                   setSaved(false);
@@ -415,12 +411,17 @@ function Appointment({
               />
             </label>
             <label className="appointment-field" htmlFor={`${id}-date`}>
-              Appointment date
+              {designation.trim()
+                ? "Appointment date"
+                : "Membership effective date"}
               <input
                 id={`${id}-date`}
                 type="date"
                 required={!!designation.trim()}
-                value={date}
+                value={
+                  designation.trim() ? date : member.membershipStartsOn || date
+                }
+                disabled={!designation.trim()}
                 onChange={(event) => {
                   setDate(event.target.value);
                   setSaved(false);
@@ -429,8 +430,9 @@ function Appointment({
             </label>
           </div>
           <p className="workspace-note">
-            Membership remains Member. This appointment has its own one-year
-            term. Clear the designation to remove the current appointment.
+            Leave the designation blank to issue the same documents as Member. A
+            designation has its own one-year term. Clearing it returns the
+            person to Member without changing their membership term.
           </p>
           <div className="panel-actions">
             <button
@@ -452,7 +454,9 @@ function Appointment({
           </div>
         </form>
         <div className="appointment-documents">
-          <h3>Appointment documents</h3>
+          <h3>
+            {designation.trim() ? "Appointment documents" : "Member documents"}
+          </h3>
           <CertificatePanel
             applicationId={member.id}
             context={chairman ? "chairman" : "secretary"}

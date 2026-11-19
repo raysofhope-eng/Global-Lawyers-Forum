@@ -152,7 +152,7 @@ export function MemberDashboard() {
                   </div>
                   <div>
                     <dt>Designation</dt>
-                    <dd>{profile.data!.designation || "Not assigned yet"}</dd>
+                    <dd>{profile.data!.designation.trim() || "Member"}</dd>
                   </div>
                   <div>
                     <dt>Effective date</dt>

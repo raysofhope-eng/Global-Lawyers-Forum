@@ -294,7 +294,7 @@ export function Dashboard() {
                           <td>
                             <MembershipStatus member={item} />
                           </td>
-                          <td>{item.designation || "Not assigned"}</td>
+                          <td>{item.designation.trim() || "Member"}</td>
                           <td>
                             {new Date(item.createdAt).toLocaleDateString()}
                           </td>
@@ -405,7 +405,7 @@ function MemberReview({ id, close }: { id: string; close: () => void }) {
               ))}
               <div>
                 <dt>Current designation</dt>
-                <dd>{detail.data.designation || "No designation"}</dd>
+                <dd>{detail.data.designation.trim() || "Member"}</dd>
               </div>
               <div>
                 <dt>Latest assigning office</dt>
