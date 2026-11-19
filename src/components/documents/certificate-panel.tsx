@@ -15,12 +15,14 @@ export const documentTitle = (type: string) =>
         : "Certificate of Appointment";
 export function CertificatePanel({
   applicationId,
-  context = "membership",
+  context = "secretary",
   delegated = false,
+  disabled = false,
 }: {
   applicationId: string;
-  context?: "membership" | "designation" | "chairman";
+  context?: "secretary" | "chairman";
   delegated?: boolean;
+  disabled?: boolean;
 }) {
   const client = useQueryClient();
   const [preview, setPreview] = useState<CertificateDraft | null>(null);
@@ -35,7 +37,13 @@ export function CertificatePanel({
     gcTime: 0,
   });
   const refresh = () =>
-    client.invalidateQueries({ queryKey: ["certificates", applicationId] });
+    Promise.all([
+      client.invalidateQueries({ queryKey: ["designations"] }),
+      client.invalidateQueries({ queryKey: ["certificates", applicationId] }),
+      client.invalidateQueries({
+        queryKey: ["issued-documents", applicationId],
+      }),
+    ]);
   if (query.isPending) return <p role="status">Loading documents…</p>;
   if (query.error)
     return (
@@ -49,13 +57,22 @@ export function CertificatePanel({
         Preview both templates using this member’s photo and details. Issued
         documents keep the details captured at the time of issue.
       </p>
+      {disabled && (
+        <p className="appointment-save-note" role="status">
+          Save the appointment details before previewing or issuing documents.
+        </p>
+      )}
       <div className="draft-grid">
         {query.data.drafts.map((draft) => (
           <article key={draft.type} className="draft-card">
             <span className="status-badge">Draft</span>
             <h3>{draft.title}</h3>
             <p>{draft.reason || "Ready to review and issue."}</p>
-            <button className="btn btn-ghost" onClick={() => setPreview(draft)}>
+            <button
+              className="btn btn-ghost"
+              disabled={disabled || !draft.canIssue}
+              onClick={() => setPreview(draft)}
+            >
               Preview{" "}
               {["appointment", "membership", "chair-appointment"].includes(
                 draft.type,
@@ -202,6 +219,10 @@ export function IssuedDocuments({
                 <p>
                   {document.designation} · Version {document.version} ·{" "}
                   {new Date(document.issuedAt).toLocaleDateString()}
+                  {" · Signed by "}
+                  {document.signer === "chairman"
+                    ? "Chairman"
+                    : "General Secretary"}
                 </p>
                 <span
                   className={`status-badge ${document.revokedAt ? "rejected" : "approved"}`}
@@ -290,4 +311,28 @@ export function IssuedDocuments({
       )}
     </>
   );
+}
+
+export function MemberIssuedDocuments({
+  applicationId,
+}: {
+  applicationId: string;
+}) {
+  const query = useQuery({
+    queryKey: ["issued-documents", applicationId],
+    queryFn: () =>
+      api<CertificateSummary[]>(
+        `/admin/applications/${applicationId}/issued-documents`,
+      ),
+    staleTime: 0,
+    gcTime: 0,
+  });
+  if (query.isPending) return <p role="status">Loading issued documents...</p>;
+  if (query.error)
+    return (
+      <p role="alert" className="field-error">
+        {query.error.message}
+      </p>
+    );
+  return <IssuedDocuments documents={query.data} />;
 }

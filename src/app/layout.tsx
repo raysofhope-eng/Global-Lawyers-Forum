@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import "../app.css";
 import '../gallery.css';
+import '../appointments.css';
 import { siteUrl } from "@/lib/seo";
 export const metadata: Metadata = {
   metadataBase: siteUrl,

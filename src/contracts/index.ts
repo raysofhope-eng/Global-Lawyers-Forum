@@ -70,6 +70,12 @@ export const certificateTypes = [
   "chair-notification",
 ] as const;
 export type CertificateType = (typeof certificateTypes)[number];
+export const appointmentCertificateTypes = [
+  "appointment",
+  "notification",
+  "chair-appointment",
+  "chair-notification",
+] as const;
 export const dateSchema = z
   .string()
   .regex(/^\d{4}-\d{2}-\d{2}$/, "Choose a valid date.")
@@ -93,7 +99,7 @@ export const membershipSchema = z
     },
   );
 export const certificateIssueSchema = z.object({
-  type: z.enum(certificateTypes),
+  type: z.enum(appointmentCertificateTypes),
   previewHash: z.string().regex(/^[a-f\d]{64}$/),
   idempotencyKey: z.string().uuid(),
 });
@@ -136,6 +142,8 @@ export interface CertificateDraft {
 export type ApplicationInput = z.infer<typeof applicationSchema>;
 export type ApplicationStatus = (typeof statuses)[number];
 export interface ApplicationSummary {
+  chairmanDocumentsAssigned?: boolean;
+  appointmentAuthorities?: ("chairman" | "secretary")[];
   membershipStartsOn: string | null;
   membershipEndsOn: string | null;
   designationEndsOn: string | null;

@@ -19,7 +19,7 @@ import { FormField, profileFields } from "@/components/ui/form-field";
 import { PasswordInput } from "@/components/ui/password-input";
 import { IssuedDocuments } from "@/components/documents/certificate-panel";
 import { Dialog } from "@/components/ui/dialog";
-import { Designations } from "@/components/admin/designations";
+import { AppointmentWorkspace } from "@/components/admin/designations";
 import { MemberEventList } from "./event-list";
 export function MemberDashboard() {
   const session = useSession();
@@ -94,7 +94,7 @@ export function MemberDashboard() {
           { id: "events", label: "Events" },
           { id: "documents", label: "Documents" },
           ...(session.data.canAssignDesignations
-            ? [{ id: "designations", label: "Assign designations" }]
+            ? [{ id: "designations", label: "General Secretary" }]
             : []),
         ]}
         value={tab}
@@ -173,7 +173,7 @@ export function MemberDashboard() {
             )}
             {tab === "events" && <MemberEventList />}
             {tab === "designations" && session.data.canAssignDesignations && (
-              <Designations delegated />
+              <AppointmentWorkspace delegated />
             )}
             {tab === "documents" &&
               (documents.isPending ? (
